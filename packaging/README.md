@@ -51,7 +51,7 @@ sh packaging/build-deb.sh
 ## 安装 / 卸载
 
 ```bash
-sudo apt install ./dist/pad-osk_0.Demo_arm64.deb
+sudo apt install ./dist/pad-osk_0.Beta_arm64.deb
 sudo apt remove  pad-osk
 sudo apt purge   pad-osk
 ```
@@ -66,7 +66,7 @@ E: 降级软件包同时使用了 -y 选项，但是没有用 --allow-downgrades
 dpkg 的版本比较是**分段**的，`1.0` 比 `1.0.0` 旧。首次从旧的 `all` 包迁移时用：
 
 ```bash
-sudo apt install -y --allow-downgrades ./dist/pad-osk_0.Demo_arm64.deb
+sudo apt install -y --allow-downgrades ./dist/pad-osk_0.Beta_arm64.deb
 ```
 
 之后同版本重装、或升到 `1.0.1` 都不再需要这个开关。
@@ -115,12 +115,12 @@ Exec=pad-osk
 
 ---
 
-## 验证记录（2026-10-23，实机）
+## 验证记录（2026-10-26，实机）
 
 ```
-构建      pad-osk_0.Demo_arm64.deb（10,980 字节）
-安装      dpkg -l → ii  pad-osk 1.0 arm64
-字段      Version: 1.0    Architecture: arm64   （与文件名一致）
+构建      pad-osk_0.Beta_arm64.deb（15,118 字节）
+安装      dpkg -l → ii  pad-osk 0.Beta arm64
+字段      Version: 0.Beta    Architecture: arm64   （与文件名一致）
 文件      /usr/bin/pad-osk, /usr/share/applications/…,
           /usr/share/gnome-shell/extensions/erhai-osk@local/{extension.js,metadata.json}
 手抄本    已移到 erhai-osk@local.hand-installed

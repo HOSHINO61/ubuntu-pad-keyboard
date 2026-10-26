@@ -95,6 +95,7 @@ GNOME Shell 进程
 | 拖动定位 | 按住拖动条 `⠿ 拖动`（位置跨登录记忆） |
 | 中/英切换 | 右下 `中/英` 键 |
 | 粘滞修饰键 | `Ctrl` `Alt` `⊞` `Shift` `Caps`（点一次作用于下一个键） |
+| 长按连发 | 按住字母/数字/符号/`⌫`/方向键连续输入，松手即停 |
 | 上档符号 | `Shift` + 数字/符号键 |
 | 模态对话框自动让开 | 关机/重启/注销对话框出现时键盘自动隐藏，关闭后恢复 |
 
@@ -161,7 +162,7 @@ scale_large=1.00
 ## 安装
 
 ```bash
-sudo apt install ./dist/pad-osk_0.Demo_arm64.deb
+sudo apt install ./dist/pad-osk_0.Beta_arm64.deb
 ```
 
 装完建议**重启**（不建议只注销：部分设备的 gdm 登录界面偶发黑屏 + 触屏失效）。
@@ -187,7 +188,7 @@ sudo apt remove pad-osk
 
 ```bash
 sh packaging/build-deb.sh
-# → dist/pad-osk_0.Demo_arm64.deb
+# → dist/pad-osk_0.Beta_arm64.deb
 ```
 
 版本号与架构都取自 `packaging/pad-osk/DEBIAN/control`，
@@ -277,10 +278,11 @@ docs/
 
 - 只支持 GNOME 45+（用了 ESM 扩展 API 与 `Clutter.VirtualInputDevice`），
   实测 GNOME 50.1
-- 扩展代码在 shell 启动时加载，**改动后必须注销重登**；
+- 扩展代码在 shell 启动时加载，**改动后必须重启整机**；
   GNOME 50 的 `ReloadExtension` 未实现、`Eval` 已禁用，没有热重载办法
+  （本机型注销会卡在 GDM 黑屏，只能重启）
 - **GDM 登录界面没有屏幕键盘**（greeter 是独立用户，看不到用户扩展）
-- 没有长按重复
+- 长按连发走"按下即发"：按住后手指划开键盘再松手，第一个字符已经发出去了
 - 当前包标注 `Architecture: arm64`；包内实际无架构相关文件，
   需要跨架构可改回 `all`
 

@@ -48,6 +48,14 @@ const XK = {
 };
 
 const POS_FILE = 'erhai-osk/position.kf';
+
+// Hold-to-repeat: every character key repeats while held, plus the keys people
+// actually hold down.  Sticky modifiers, shift, symbol and the IME key never
+// repeat -- repeating those would arm a modifier or a chord by accident.
+const REPEATABLE = new Set([XK.BackSpace, XK.Left, XK.Up, XK.Right, XK.Down]);
+const REPEAT_DELAY_MS = 620;      // ignore a normal tap
+const REPEAT_INTERVAL_MS = 125;   // ~8/s while getting going
+const REPEAT_FAST_MS = 60;        // ~17/s once it is clearly deliberate
 // Shared on/off state: the app launcher writes it, the extension watches it, so
 // the Quick Settings switch and the PAD-OSK icon act on the SAME axis.
 const STATE_FILE = 'erhai-osk/visible';
@@ -233,7 +241,7 @@ function makeQsClasses(QS) {
 
 export default class ErhaiOSK extends Extension {
     enable() {
-        log('erhai-osk: v13 enable (sizes, in-place visuals, shifted symbols)');
+        log('erhai-osk: v14 enable (sizes, in-place visuals, shifted symbols)');
         try {
             const seat = this._makeSeat();
             if (!seat) {
@@ -247,6 +255,12 @@ export default class ErhaiOSK extends Extension {
             this._shift = false;
             this._caps = false;
             this._mods = {ctrl: false, alt: false, super: false};
+            // hold-to-repeat state
+            this._repeatFire = null;
+            this._repeatCount = 0;
+            this._repeatDelayId = 0;
+            this._repeatTimerId = 0;
+            this._repeatStageId = 0;
 
             // Widget references so state changes update labels/styles IN PLACE.
             // Rebuilding the rows caused a stray character: destroy+recreate
@@ -323,9 +337,9 @@ export default class ErhaiOSK extends Extension {
                 .then(QS => this._addQuickSettings(QS))
                 .catch(e => log(`erhai-osk: quick settings unavailable: ${e}`));
 
-            log('erhai-osk: v13 enabled');
+            log('erhai-osk: v14 enabled');
         } catch (e) {
-            log(`erhai-osk: v13 enable failed: ${e}`);
+            log(`erhai-osk: v14 enable failed: ${e}`);
         }
     }
 
@@ -378,8 +392,9 @@ export default class ErhaiOSK extends Extension {
         this._styledKeys = [];
         this._sizeBtns = {};
         this._savedConfig = null;
+        this._repeatCancel();
         this._vdev = null;
-        log('erhai-osk: v13 disabled');
+        log('erhai-osk: v14 disabled');
     }
 
     _makeSeat() {
@@ -624,7 +639,9 @@ export default class ErhaiOSK extends Extension {
             can_focus: false,
             track_hover: true,
         });
-        btn.connect('clicked', () => this._emitChar(def));
+        // Letters, digits and symbols all repeat while held.  A closure per key
+        // so the repeat honours caps/shift exactly like a single tap does.
+        this._attachRepeat(btn, () => this._emitChar(def));
         this._styledKeys.push({btn, kind: 'key', minW: def.minW, mod: null});
         return btn;
     }
@@ -654,9 +671,120 @@ export default class ErhaiOSK extends Extension {
             this._modButtons.push({name: def.mod, btn, minW: def.minW});
             btn.connect('clicked', () => this._toggleMod(def.mod));
         } else if (def.keysym !== undefined) {
-            btn.connect('clicked', () => this._emit(def.keysym, false));
+            if (REPEATABLE.has(def.keysym)) {
+                // Erase and the arrows: held keys repeat, like a real keyboard.
+                this._attachRepeat(btn, () => this._emit(def.keysym, false));
+            } else {
+                btn.connect('clicked', () => this._emit(def.keysym, false));
+            }
         }
         return btn;
+    }
+
+    // ---- hold-to-repeat (⌫ and the arrow keys) ------------------------
+    // The first key goes out on press so a quick tap feels immediate; further
+    // repeats wait out a delay, then speed up.  Release, a stage-level backstop
+    // and hiding the panel all cancel the timer, so a key can never keep firing
+    // after the finger is gone.
+    _attachRepeat(btn, fire) {
+        btn.connect('button-press-event', () => {
+            this._repeatStart(fire);
+            return Clutter.EVENT_PROPAGATE;
+        });
+        btn.connect('button-release-event', () => {
+            this._repeatEnd();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        btn.connect('touch-event', (_actor, event) => {
+            const type = event.type();
+            if (type === Clutter.EventType.TOUCH_BEGIN)
+                this._repeatStart(fire);
+            else if (type === Clutter.EventType.TOUCH_END
+                     || type === Clutter.EventType.TOUCH_CANCEL)
+                this._repeatEnd();
+            return Clutter.EVENT_PROPAGATE;
+        });
+        // St.Button drives touch through an internal click gesture, and once
+        // that gesture owns the sequence the actor stops seeing the release --
+        // 'clicked' is the release signal we actually get, so the key itself
+        // goes out on press and a tap's only remaining job is to stop the timer.
+        btn.connect('clicked', () => this._repeatEnd());
+    }
+
+    _repeatStart(fire) {
+        // A touch press arrives as both a touch-event and an emulated
+        // button-press; the second must not restart and re-send the key.
+        if (this._repeatFire)
+            return;
+        this._repeatFire = fire;
+        this._repeatCount = 0;
+        this._repeatEmit();
+        this._backstopRelease();
+        this._repeatDelayId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, REPEAT_DELAY_MS, () => {
+                this._repeatDelayId = 0;
+                this._repeatTick();
+                return GLib.SOURCE_REMOVE;
+            });
+    }
+
+    _repeatEnd() {
+        if (!this._repeatFire)
+            return;
+        this._repeatCancel();
+    }
+
+    _repeatEmit() {
+        if (!this._repeatFire || !this._vdev)
+            return;
+        this._repeatFire();
+    }
+
+    _repeatTick() {
+        if (!this._repeatFire)
+            return;
+        this._repeatEmit();
+        this._repeatCount++;
+        const interval = this._repeatCount > 10
+            ? REPEAT_FAST_MS : REPEAT_INTERVAL_MS;
+        this._repeatTimerId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, interval, () => {
+                this._repeatTimerId = 0;
+                this._repeatTick();
+                return GLib.SOURCE_REMOVE;
+            });
+    }
+
+    // Last line of defence: the button may never see the release (a finger
+    // that slides off, or a sequence the click gesture swallowed), so watch the
+    // whole stage for it.  Without this a held key would repeat forever.
+    _backstopRelease() {
+        if (this._repeatStageId)
+            return;
+        this._repeatStageId = global.stage.connect('captured-event',
+            (_actor, event) => {
+                const type = event.type();
+                if (type === Clutter.EventType.BUTTON_RELEASE
+                    || type === Clutter.EventType.TOUCH_END
+                    || type === Clutter.EventType.TOUCH_CANCEL)
+                    this._repeatEnd();
+                return Clutter.EVENT_PROPAGATE;
+            });
+    }
+
+    _repeatCancel() {
+        this._repeatFire = null;
+        this._repeatCount = 0;
+        for (const id of [this._repeatDelayId, this._repeatTimerId]) {
+            if (id)
+                GLib.source_remove(id);
+        }
+        this._repeatDelayId = 0;
+        this._repeatTimerId = 0;
+        if (this._repeatStageId) {
+            global.stage.disconnect(this._repeatStageId);
+            this._repeatStageId = 0;
+        }
     }
 
     // Super+Space: GNOME's "switch input source" (us <-> libpinyin).  Sent as a
@@ -725,6 +853,8 @@ export default class ErhaiOSK extends Extension {
 
     _setVisible(visible, writeState = true) {
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        if (!visible)
+            this._repeatCancel();
         this._hidden = !visible;
         if (this._box)
             this._box.visible = visible;

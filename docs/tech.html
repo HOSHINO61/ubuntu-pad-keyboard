@@ -358,7 +358,7 @@ scale_large=0.99</code></pre>
             <li data-en="Verified only on the OnePlus Pad 2 Pro with GNOME 50 Wayland; other arm64 tablets are untested.">只在一加 Pad 2 Pro + GNOME 50 Wayland 上验证过，其它 arm64 平板未测。</li>
             <li data-en="metadata.json declares shell-version 50 only; GNOME 45 to 49 will not load it, and a major upgrade may need an edit."><code>metadata.json</code> 只声明 <code>shell-version: [&quot;50&quot;]</code>，GNOME 45–49 不会加载；系统大版本升级后可能要改。</li>
             <li data-en="The three steps are absolute pixels calibrated on 1696 px; a tablet with a different logical width drifts (todo: adapt to the screen width).">三档是绝对像素，按 1696 px 标定；不同逻辑分辨率的平板比例会漂（待办：改为按屏宽比例自适应）。</li>
-            <li data-en="No key repeat on long press, no smart avoidance around the caret.">没有长按重复，也没有随候选框位置的智能避让。</li>
+            <li data-en="No smart avoidance around the caret — the keyboard stays where you put it.">没有随候选框位置自动避让，键盘停在你放的位置。</li>
             <li data-en="The GDM greeter has no on-screen keyboard: the greeter is a separate user and cannot see a user extension.">GDM 登录界面没有屏幕键盘：greeter 是独立用户，看不到用户扩展。</li>
           </ul>
         </div>
@@ -374,7 +374,7 @@ scale_large=0.99</code></pre>
             <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
             <pre><code><span class="c"># 构建（需要 dpkg-deb）</span>
 sh packaging/build-deb.sh
-<span class="c"># → dist/pad-osk_0.Demo_arm64.deb</span></code></pre>
+<span class="c"># → dist/pad-osk_0.Beta_arm64.deb</span></code></pre>
           </div>
         </div>
       </div>

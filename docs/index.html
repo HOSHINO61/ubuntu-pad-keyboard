@@ -38,6 +38,9 @@
     <symbol id="i-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="3"/></symbol>
     <symbol id="i-focus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
     <symbol id="i-window" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M7 6.5h.01"/></symbol>
+    <symbol id="i-shift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 8h-4.5v7h-7v-7H4z"/></symbol>
+    <symbol id="i-pierce" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3" stroke-dasharray="3 3"/><path d="M3 12h18"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h13"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H4"/></symbol>
     <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
     <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></symbol>
@@ -84,10 +87,11 @@
           <svg aria-hidden="true"><use href="#i-warn"/></svg>
           <span data-en-html="Requires <b>GNOME 50 + Wayland</b> on an <b>arm64</b> machine. The .deb is arm64 only; amd64 is not built yet.">需要 <b>GNOME 50 + Wayland</b>，且机器是 <b>arm64</b>；目前只提供 arm64 的 .deb，amd64 待构建。</span>
         </p>
-        <p class="hero-tip">
-          <svg aria-hidden="true"><use href="#i-check"/></svg>
-          <span data-en="Demo is out — download and try it">Demo 已发布，欢迎下载体验</span>
-        </p>
+        <a class="hero-tip" href="#download">
+          <svg aria-hidden="true" width="15" height="15"><use href="#i-check"/></svg>
+          <span data-en="Beta is out — grab it on Gitee or GitHub">Beta 版已发布，去 Gitee / GitHub 下载体验</span>
+          <svg aria-hidden="true" width="13" height="13" style="opacity:.75"><use href="#i-arrow"/></svg>
+        </a>
         <div class="hero-cta">
           <a class="btn btn-primary" href="#download">
             <svg aria-hidden="true"><use href="#i-dl"/></svg>
@@ -102,8 +106,8 @@
           <span class="chip"><b>GNOME Shell 50</b></span>
           <span class="chip"><b>arm64</b> · Wayland</span>
           <span class="chip">MIT License</span>
-          <span class="chip">Demo</span>
-          <span class="chip"><b>13.7</b> KB</span>
+          <span class="chip">Beta</span>
+          <span class="chip"><b>14.8</b> KB</span>
         </div>
       </div>
 
@@ -274,11 +278,14 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
       <div class="features">
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-grid"/></svg></span><div><h3 data-en="Full PC layout">PC 风格全键盘</h3><p data-en="Number row, letters, arrows, Esc / Tab / Del / Enter. No flipping between symbol pages.">数字行（含上档符号）、字母、方向键、Esc / Tab / Del / Enter，不用在符号页之间来回翻。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-sticky"/></svg></span><div><h3 data-en="Sticky modifiers">粘滞修饰键</h3><p data-en="Ctrl / Alt / ⊞ / Shift / Caps apply to the next key only — no long-press on a touchscreen.">Ctrl / Alt / ⊞ / Shift / Caps 点一次只作用于下一个键，触摸屏上不用长按。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-repeat"/></svg></span><div><h3 data-en="Long-press repeat">长按连发</h3><p data-en="Hold a character key, Backspace or an arrow key and it keeps firing: 620 ms to start, 125 ms per step, ramping to 60 ms. Modifiers and Shift never repeat.">按住字符键、退格或方向键不放会连续输入：620 ms 起发、125 ms 一步、逐步加速到 60 ms；修饰键和 Shift 不连发。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-shift"/></svg></span><div><h3 data-en="Shifted symbols">上档符号</h3><p data-en="Digits and punctuation fire as base key plus a real Shift press, so ! @ # $ % never come out as 1 2 3 4 5.">数字行和符号键的上档字符走"基键 + 真按 Shift"，不是直接发那个字符，所以 ! @ # $ % 一个不少。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-globe"/></svg></span><div><h3 data-en="Chinese / English">中 / 英切换</h3><p data-en="The 中/英 key sends Super+Space through GNOME's input-source switch; candidates work as usual in ibus-libpinyin.">右下角 中/英 键直发 Super+Space，走 GNOME 输入源切换；ibus-libpinyin 的候选词照常操作。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-expand"/></svg></span><div><h3 data-en="Three sizes">三档尺寸</h3><p data-en="Small / medium / large at 55 %, 66 % and 76 % of the screen width, switched from the grip bar and remembered across logins.">小 / 中 / 大三档占屏宽 55 % / 66 % / 76 %，拖动条右侧一点即换，跨登录记忆。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-move"/></svg></span><div><h3 data-en="Drag and collapse">可拖动 · 可收起</h3><p data-en="Hold the grip bar to move it, ⌄ collapses it to a thin strip, ✕ closes it. The position survives a reboot.">按住拖动条定位，⌄ 收起成细条，✕ 关闭；位置与档位重启后还在。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-toggle"/></svg></span><div><h3 data-en="Two entry points, one state">两个入口，一个状态</h3><p data-en="The Quick Settings switch and the Pad-OSK app icon share one state file, so the two never disagree.">Quick Settings 的「屏幕键盘」开关与应用抽屉里的 Pad-OSK 图标共用同一个状态文件，不会各说各话。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-focus"/></svg></span><div><h3 data-en="Never steals focus">不抢焦点</h3><p data-en="The UI is a shell layer, so tapping a key does not move the caret out of the field you were typing in.">UI 是 shell 图层而不是窗口，点键盘不会把光标从输入框里赶走。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-pierce"/></svg></span><div><h3 data-en="Empty space passes through">空白区可穿透</h3><p data-en="The container is reactive: false, so only the keys take events — tapping the gap around the keyboard reaches the window underneath.">容器 <code>reactive: false</code>，只有按键接收事件；点到键盘周围的空白区，事件会落到下层窗口。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-window"/></svg></span><div><h3 data-en="Steps aside for dialogs">关机对话框自动让开</h3><p data-en="When the shutdown / restart / logout dialog appears the keyboard hides, and comes back when the dialog closes.">关机、重启、注销对话框出现时键盘自动隐藏，关闭后恢复，不会挡住按钮。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-save"/></svg></span><div><h3 data-en="Remembers your setup">配置持久化</h3><p data-en="Position, visibility and size step are written to ~/.config/erhai-osk/position.kf and survive uninstall.">位置、开关状态、尺寸档位写在 <code>~/.config/erhai-osk/position.kf</code>，卸载也会保留。</p></div></article>
       </div>
@@ -302,7 +309,7 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
             <span class="n">1</span>
             <div>
               <h3 data-en="Get the package">拿到安装包</h3>
-              <p data-en="Download pad-osk_0.Demo_arm64.deb (13.7 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and arm64 is the only build available.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_0.Demo_arm64.deb</code>（13.7 KB）。两个仓库内容对等；<strong>目前只有 arm64 构建</strong>。</p>
+              <p data-en="Download pad-osk_0.Beta_arm64.deb (14.8 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and arm64 is the only build available.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_0.Beta_arm64.deb</code>（14.8 KB）。两个仓库内容对等；<strong>目前只有 arm64 构建</strong>。</p>
               <div class="code">
                 <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
                 <pre><code>gitee.com/HOSHINO6/ubuntu-pad-keyboard/releases
@@ -318,7 +325,7 @@ github.com/HOSHINO61/ubuntu-pad-keyboard/releases</code></pre>
               <div class="code">
                 <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
                 <pre><code><span class="c"># 在安装包所在目录</span>
-sudo apt install ./pad-osk_0.Demo_arm64.deb</code></pre>
+sudo apt install ./pad-osk_0.Beta_arm64.deb</code></pre>
               </div>
             </div>
           </div>
@@ -394,7 +401,7 @@ sudo apt install ./pad-osk_0.Demo_arm64.deb</code></pre>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Only verified on the OnePlus Pad 2 Pro with GNOME 50 Wayland. Other tablets: self-test.">只在<strong>一加 Pad 2 Pro + GNOME 50 Wayland</strong>上验证过，其它平板自测。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en-html="metadata.json declares shell-version 50 only — GNOME 45–49 will not load it. <strong>There is only an arm64 package; amd64 is not built yet.</strong>"><code>metadata.json</code> 只声明 <code>shell-version: [&quot;50&quot;]</code>，GNOME 45–49 不会加载；<strong>只有 arm64 包，amd64 尚未构建</strong>。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The three sizes are absolute pixels calibrated for 1696 px, so a different logical resolution drifts the ratio (adaptive scaling is on the todo list).">三档是<strong>绝对像素</strong>，按 1696 px 逻辑屏宽标定；换不同逻辑分辨率的平板比例会漂（自适应缩放待办中）。</span></li>
-            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Chinese input needs ibus + ibus-libpinyin (already in Recommends), and there is no key repeat on long press.">打中文需要 <code>ibus</code> + <code>ibus-libpinyin</code>（已在 <code>Recommends</code> 里声明）；另外没有长按重复。</span></li>
+            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Chinese input needs ibus + ibus-libpinyin (already in Recommends).">打中文需要 <code>ibus</code> + <code>ibus-libpinyin</code>（已在 <code>Recommends</code> 里声明）。</span></li>
           </ul>
           <a class="link-more" href="tech.html#limits">
             <span data-en="Compatibility details">兼容性细节</span>
@@ -410,9 +417,9 @@ sudo apt install ./pad-osk_0.Demo_arm64.deb</code></pre>
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow" data-en="Download">下载</p>
-        <h2 data-en="Download vDemo">下载 vDemo</h2>
-        <p class="lead" data-en="The package is pad-osk_0.Demo_arm64.deb, 13.7 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
-          安装包 <code>pad-osk_0.Demo_arm64.deb</code>，13.7 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
+        <h2 data-en="Download vBeta">下载 vBeta</h2>
+        <p class="lead" data-en="The package is pad-osk_0.Beta_arm64.deb, 14.8 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
+          安装包 <code>pad-osk_0.Beta_arm64.deb</code>，14.8 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
         </p>
       </div>
 

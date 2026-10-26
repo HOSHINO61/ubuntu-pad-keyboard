@@ -1,5 +1,5 @@
 Package: pad-osk
-Version: 0.Demo
+Version: 0.Beta
 Architecture: arm64
 Maintainer: erhai <user@opd2413.local>
 Section: utils
@@ -17,7 +17,8 @@ Description: On-screen keyboard with three sizes, for the OnePlus Pad 2 Pro
  Chromium and Electron (Chrome, QQ) -- receive them normally.
  .
  Layout is PC-style with a number row, sticky modifiers, arrow keys and a
- Chinese/English input-method toggle. Three key sizes (small / medium / large,
+ Chinese/English input-method toggle. Every character key, the erase key and
+ the arrows repeat while held. Three key sizes (small / medium / large,
  55% / 66% / 76% of the screen width) are picked from the grip bar and can be
  fine-tuned from ~/.config/erhai-osk/position.kf. The panel can be dragged,
  collapsed to a thin bar, closed, and hidden from Quick Settings or the
