@@ -286,7 +286,7 @@ background=/home/user/图片/星空.webp
 |---|---|---|
 | ![小](docs/images/keyboard-v1.0-size-small.png) | ![中](docs/images/keyboard-v1.0-size-medium.png) | ![大](docs/images/keyboard-v1.0-size-large.png) |
 
-三张都是同一套外观（深灰、100% 透明、圆角小、无背景），差别只在尺寸。
+三张都是同一套外观（浅色、100% 透明、圆角大、无背景），差别只在尺寸。
 
 ## 安装
 
