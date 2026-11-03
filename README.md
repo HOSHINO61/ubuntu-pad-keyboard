@@ -16,16 +16,16 @@ PC 风格布局、大按键、**支持中文输入**、可在系统菜单/应用
 
 ## 适用环境
 
-这个键盘是为arm64的 Ubuntu 移植方案配套做的，**不是通用屏幕键盘**：
+只要能跑 **GNOME 50 Wayland**，平板和笔记本都能用——这是个普通的 GNOME Shell 扩展，
+不绑定机型。下面的实测环境是一加平板 2 Pro，**其它机型请自测**：
 
 | 项目 | 要求 |
 |---|---|
-| 设备 | 一加平板 2 Pro（OPD2413 / `erhai` / SM8750P，其它平板自测） |
-| 系统 | 已按 [Ubuntu for OnePlus Pad 2 Pro](https://github.com/yzddmr6/onepluspad-2pro-mainline/blob/main/README.zh-CN.md) 完成安装，其它平板请按型号安装 | 
-| 桌面 | **GNOME 50、Wayland 会话** |
+| 设备 | 任何触屏设备（实测：一加平板 2 Pro / OPD2413 / `erhai` / SM8750P） |
+| 系统 | 实测按 [Ubuntu for OnePlus Pad 2 Pro](https://github.com/yzddmr6/onepluspad-2pro-mainline/blob/main/README.zh-CN.md) 安装的 Ubuntu 26.04.1；别的发行版只要 GNOME 50 也能用 |
+| 桌面 | **GNOME 50、Wayland 会话**（这是硬要求） |
 
-上游项目一般提供了分区、系统安装和硬件适配的完整流程；本仓库只负责其中的
-**触屏输入**这一块。装系统、分区、驱动问题请到上游仓库反馈，不要提到这里。
+装系统、分区、驱动问题请到对应的上游项目反馈，不要提到这里。
 
 > X11 会话、KDE、其他合成器上不能用——本扩展依赖 GNOME Shell 的
 > `Clutter.VirtualInputDevice` 和 `Main.layoutManager`。
