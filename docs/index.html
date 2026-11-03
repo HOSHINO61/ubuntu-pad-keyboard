@@ -89,7 +89,7 @@
         </p>
         <a class="hero-tip" href="#download">
           <svg aria-hidden="true" width="15" height="15"><use href="#i-check"/></svg>
-          <span data-en="Beta is out — grab it on Gitee or GitHub">Beta 版已发布，去 Gitee / GitHub 下载体验</span>
+          <span data-en="v1.0 is out — grab it on Gitee or GitHub">v1.0 已发布，去 Gitee / GitHub 下载</span>
           <svg aria-hidden="true" width="13" height="13" style="opacity:.75"><use href="#i-arrow"/></svg>
         </a>
         <div class="hero-cta">
@@ -106,7 +106,7 @@
           <span class="chip"><b>GNOME Shell 50</b></span>
           <span class="chip"><b>arm64</b> · Wayland</span>
           <span class="chip">MIT License</span>
-          <span class="chip">Beta</span>
+          <span class="chip">v1.0</span>
           <span class="chip"><b>14.8</b> KB</span>
         </div>
       </div>
@@ -258,8 +258,8 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
           <div class="stat"><dt data-en="Panel / screen width">面板 · 占屏宽</dt><dd data-size-val="panel">1120×421</dd></div>
         </dl>
       </div>
-      <p class="kbd-note" data-en="Measured on a 1696 px logical screen width. Scale factors live in ~/.config/erhai-osk/position.kf under [layout] and range from 0.40 to 2.00 — tune them without repackaging.">
-        数值按 1696 px 逻辑屏宽实测标定。三档缩放写在 <code>~/.config/erhai-osk/position.kf</code> 的 <code>[layout]</code> 组里，范围 0.40–2.00，改完点一下尺寸按钮就生效，不用重新打包。
+      <p class="kbd-note" data-en="Measured on a 1696 px logical screen width. Scale factors live in ~/.config/pad-osk/position.kf under [layout] and range from 0.40 to 2.00 — tune them without repackaging.">
+        数值按 1696 px 逻辑屏宽实测标定。三档缩放写在 <code>~/.config/pad-osk/position.kf</code> 的 <code>[layout]</code> 组里，范围 0.40–2.00，改完点一下尺寸按钮就生效，不用重新打包。
       </p>
     </div>
   </section>
@@ -287,7 +287,7 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-focus"/></svg></span><div><h3 data-en="Never steals focus">不抢焦点</h3><p data-en="The UI is a shell layer, so tapping a key does not move the caret out of the field you were typing in.">UI 是 shell 图层而不是窗口，点键盘不会把光标从输入框里赶走。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-pierce"/></svg></span><div><h3 data-en="Empty space passes through">空白区可穿透</h3><p data-en="The container is reactive: false, so only the keys take events — tapping the gap around the keyboard reaches the window underneath.">容器 <code>reactive: false</code>，只有按键接收事件；点到键盘周围的空白区，事件会落到下层窗口。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-window"/></svg></span><div><h3 data-en="Steps aside for dialogs">关机对话框自动让开</h3><p data-en="When the shutdown / restart / logout dialog appears the keyboard hides, and comes back when the dialog closes.">关机、重启、注销对话框出现时键盘自动隐藏，关闭后恢复，不会挡住按钮。</p></div></article>
-        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-save"/></svg></span><div><h3 data-en="Remembers your setup">配置持久化</h3><p data-en="Position, visibility and size step are written to ~/.config/erhai-osk/position.kf and survive uninstall.">位置、开关状态、尺寸档位写在 <code>~/.config/erhai-osk/position.kf</code>，卸载也会保留。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-save"/></svg></span><div><h3 data-en="Remembers your setup">配置持久化</h3><p data-en="Position, visibility and size step are written to ~/.config/pad-osk/position.kf and survive uninstall.">位置、开关状态、尺寸档位写在 <code>~/.config/pad-osk/position.kf</code>，卸载也会保留。</p></div></article>
       </div>
     </div>
   </section>
@@ -309,7 +309,7 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
             <span class="n">1</span>
             <div>
               <h3 data-en="Get the package">拿到安装包</h3>
-              <p data-en="Download pad-osk_0.Beta_arm64.deb (14.8 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and arm64 is the only build available.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_0.Beta_arm64.deb</code>（14.8 KB）。两个仓库内容对等；<strong>目前只有 arm64 构建</strong>。</p>
+              <p data-en="Download pad-osk_1.0_arm64.deb (25.5 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and arm64 is the only build available.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_1.0_arm64.deb</code>（25.5 KB）。两个仓库内容对等；<strong>目前只有 arm64 构建</strong>。</p>
               <div class="code">
                 <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
                 <pre><code>gitee.com/HOSHINO6/ubuntu-pad-keyboard/releases
@@ -325,7 +325,7 @@ github.com/HOSHINO61/ubuntu-pad-keyboard/releases</code></pre>
               <div class="code">
                 <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
                 <pre><code><span class="c"># 在安装包所在目录</span>
-sudo apt install ./pad-osk_0.Beta_arm64.deb</code></pre>
+sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
               </div>
             </div>
           </div>
@@ -417,9 +417,9 @@ sudo apt install ./pad-osk_0.Beta_arm64.deb</code></pre>
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow" data-en="Download">下载</p>
-        <h2 data-en="Download vBeta">下载 vBeta</h2>
-        <p class="lead" data-en="The package is pad-osk_0.Beta_arm64.deb, 14.8 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
-          安装包 <code>pad-osk_0.Beta_arm64.deb</code>，14.8 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
+        <h2 data-en="Download v1.0">下载 v1.0</h2>
+        <p class="lead" data-en="The package is pad-osk_1.0_arm64.deb, 25.5 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
+          安装包 <code>pad-osk_1.0_arm64.deb</code>，25.5 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
         </p>
       </div>
 

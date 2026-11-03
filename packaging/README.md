@@ -109,7 +109,7 @@ Exec=pad-osk
 
 ### 3. 卸载不要碰用户数据
 
-`~/.config/erhai-osk/` 存的是键盘位置（`position.kf`）和开关状态（`visible`）。
+`~/.config/pad-osk/` 存的是键盘位置（`position.kf`）和开关状态（`visible`）。
 `postrm` **故意不删**：重装后位置和开关状态还在，符合预期。
 同理也不去改用户的 `enabled-extensions` 列表——目录没了 shell 自己会忽略该 uuid。
 
@@ -127,9 +127,34 @@ Exec=pad-osk
 旧启动器  /usr/local/bin/pad-osk 已移除
 旧桌面项  ~/.local/share/applications/… 已移除
 启动器    pad-osk → keyboard on / keyboard off（往返正常）
-卸载      系统目录与启动器清空，~/.config/erhai-osk/ 保留
+卸载      系统目录与启动器清空，~/.config/pad-osk/ 保留
 重装      回到 ii 状态
 ```
+
+---
+
+## 验证记录（2026-11-03，1.0，构建机 + 实机）
+
+1.0 加了 ⚙ 设置面板（尺寸 / 配色 / 透明 / 圆角）、自定义配色、背景图与恢复默认。
+本版在平板上实装验证过：设置面板开合、四套配色切换、透明度 50%–100%、圆角四档、
+系统文件选择器选图与导入、`管理…` 删除二次确认、`恢复默认` 保留背景路径，均正常，
+`journalctl` 无 JS 异常。
+
+```
+构建      pad-osk_1.0_arm64.deb（26,104 字节）
+          在 Ubuntu 24.04 x86_64 虚拟机上用 dpkg-deb 1.22.6 构建（纯打包，无编译）
+sha256    26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
+字段      Package: pad-osk  Version: 1.0  Architecture: arm64
+包内      control.tar.zst + data.tar.zst（dpkg ≥ 1.21.18 可解，Ubuntu 22.04+ 都行）
+载荷      extension.js / metadata.json / pad-osk / pad-osk.desktop
+          与工作区文件 sha256 逐一相同
+权限      /usr/bin/pad-osk 0755，其余 0644
+换行      四个脚本与配置 CR=0（无 CRLF）
+配置目录  ~/.config/pad-osk/（从 ~/.config/erhai-osk/ 一次性迁移）
+```
+
+⚠️ `Version:` 已经是 `1.0`。从 `0.Beta` / `0.Beta2` 装上去属于升级；反向回退需要
+`apt install --allow-downgrades`。
 
 ---
 

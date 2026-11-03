@@ -47,7 +47,7 @@ const XK = {
     Super_L: 0xffeb,
 };
 
-const POS_FILE = 'erhai-osk/position.kf';
+const POS_FILE = 'pad-osk/position.kf';
 
 // Hold-to-repeat: every character key repeats while held, plus the keys people
 // actually hold down.  Sticky modifiers, shift, symbol and the IME key never
@@ -58,24 +58,192 @@ const REPEAT_INTERVAL_MS = 125;   // ~8/s while getting going
 const REPEAT_FAST_MS = 60;        // ~17/s once it is clearly deliberate
 // Shared on/off state: the app launcher writes it, the extension watches it, so
 // the Quick Settings switch and the PAD-OSK icon act on the SAME axis.
-const STATE_FILE = 'erhai-osk/visible';
+const STATE_FILE = 'pad-osk/visible';
 
 // ---- styling ---------------------------------------------------------
-// Sized for older eyes and unsteady fingers: large glyphs, tall keys and a
-// brighter, higher-contrast palette than a typical desktop theme.
+// Three things are user-adjustable from the ⚙ menu, and all of them live
+// here: the size of every dimension (小/中/大), the palette (配色), and how
+// see-through the keyboard's background is (透明, 100%..50%).
 //
 // Every dimension below is written for the *medium* size and multiplied by a
 // per-size scale factor, so the three sizes stay proportional instead of
 // drifting apart.  See SIZE_STEPS / _setSize().
-const COLORS = {
-    key: 'background-color: #4a4e53; color: #ffffff;',
-    mod: 'background-color: #5a5f65; color: #ffdc8a;',
-    act: 'background-color: #54595f; color: #b9e4e6;',
-    on: 'background-color: #ffd479; color: #1e2022;',
+//
+// Palettes: spelled out role by role, so a theme can never inherit a colour
+// left over from the one before it.  Roles ([background, foreground] pairs
+// unless noted):
+//   key / mod / act  ordinary key, sticky modifier, action key
+//   on               a modifier that is currently armed (the lit key)
+//   grip / btn / close / idle    the bar around the keys
+//   accent(+accentFg)            the filled choice in a segmented control
+//   shift            the small shifted glyph above a key cap
+//   panel / panelAlpha          keyboard background: "r,g,b" + its own alpha
+//   panelAlt                    settings sheet inside the panel
+//   swatch           the theme's own chooser button
+//
+// THEME is module state: _setTheme() swaps the object, then every style is
+// re-applied in place by _applyScale() -- no actor is ever rebuilt.
+const THEMES = [
+    {
+        name: 'graphite', label: '深灰',
+        panel: '18,20,22', panelAlpha: 0.97, panelAlt: 'rgba(0,0,0,0.25)',
+        key: ['#4a4e53', '#ffffff'],
+        mod: ['#5a5f65', '#ffdc8a'],
+        act: ['#54595f', '#b9e4e6'],
+        on: ['#ffd479', '#1e2022'],
+        grip: ['#33373b', '#b0b8c0'],
+        btn: ['#474c52', '#ffd479'],
+        close: ['#553a3a', '#ffabab'],
+        idle: ['#3c4147', '#c9d1d9'],
+        accent: '#ffd479', accentFg: '#1e2022',
+        shift: ['#a8b0b8', '#ffffff'],
+        swatch: ['#4a4e53', '#ffffff'],
+    },
+    {
+        name: 'light', label: '浅色',
+        panel: '244,246,249', panelAlpha: 0.98, panelAlt: 'rgba(15,23,42,0.07)',
+        key: ['#ffffff', '#1b1e21'],
+        mod: ['#e8eef6', '#8a5a00'],
+        act: ['#e4edf2', '#0f6d78'],
+        on: ['#1f6feb', '#ffffff'],
+        grip: ['#dfe5ec', '#3d4650'],
+        btn: ['#e8eef6', '#1f6feb'],
+        close: ['#ffe1e1', '#b4232a'],
+        idle: ['#eef2f7', '#4b5563'],
+        accent: '#1f6feb', accentFg: '#ffffff',
+        shift: ['#6b7480', '#111418'],
+        swatch: ['#ffffff', '#1b1e21'],
+    },
+    {
+        name: 'warm', label: '暖色',
+        panel: '43,37,32', panelAlpha: 0.97, panelAlt: 'rgba(0,0,0,0.22)',
+        key: ['#5b5046', '#fdf6ec'],
+        mod: ['#6d6052', '#ffd9a0'],
+        act: ['#63584a', '#d8f3c9'],
+        on: ['#f3a952', '#241d16'],
+        grip: ['#3b332c', '#c8bcae'],
+        btn: ['#4f463c', '#f3a952'],
+        close: ['#5e3b38', '#ffb3a7'],
+        idle: ['#463d34', '#d9cfc2'],
+        accent: '#f3a952', accentFg: '#241d16',
+        shift: ['#b3a898', '#ffffff'],
+        swatch: ['#5b5046', '#fdf6ec'],
+    },
+    {
+        name: 'contrast', label: '高对比',
+        panel: '0,0,0', panelAlpha: 1.0, panelAlt: '#111111',
+        key: ['#1a1a1a', '#ffffff'],
+        mod: ['#262600', '#ffff00'],
+        act: ['#002626', '#00ffff'],
+        on: ['#ffff00', '#000000'],
+        grip: ['#000000', '#ffff00'],
+        btn: ['#1a1a1a', '#ffff00'],
+        close: ['#330000', '#ff8080'],
+        idle: ['#1a1a1a', '#ffffff'],
+        accent: '#ffff00', accentFg: '#000000',
+        shift: ['#cccccc', '#ffffff'],
+        swatch: ['#1a1a1a', '#ffffff'],
+    },
+];
+const DEFAULT_THEME = 'graphite';
+let THEME = THEMES.find(t => t.name === DEFAULT_THEME);
+
+// 透明度: a multiplier applied to the whole keyboard panel -- background, key
+// faces, chrome and glyphs alike -- so the keyboard reads as one piece of
+// glass instead of a see-through frame with solid keys.  It rides on the
+// actor's own opacity (Clutter paints the actor and its children with it), so
+// every style below stays completely unaware of it.
+//
+// 50% is the floor: below that the keys float over a live desktop and the
+// glyphs stop being readable.
+const OPACITY_STEPS = [
+    {value: 1.0, label: '100'},
+    {value: 0.9, label: '90'},
+    {value: 0.8, label: '80'},
+    {value: 0.7, label: '70'},
+    {value: 0.6, label: '60'},
+    {value: 0.5, label: '50'},
+];
+const DEFAULT_OPACITY = 1.0;
+const OPACITY_MIN = 0.5;
+let OPACITY = DEFAULT_OPACITY;
+
+// ---- custom palette --------------------------------------------------
+// [custom] in position.kf: panel= key= mod= act= on= as #rrggbb (three-digit
+// hex is accepted too).  Foregrounds are computed from luminance, so a light
+// panel gets dark glyphs without the user having to spell out both halves of
+// every [bg, fg] pair.  Every role the presets define is derived from those
+// five, which is why a custom palette can never end up half-populated.
+const CUSTOM_THEME = 'custom';
+
+const hexToRgb = hex => {
+    const h = String(hex ?? '').trim().replace(/^#/, '');
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    if (!/^[0-9a-fA-F]{6}$/.test(full))
+        return null;
+    return [0, 2, 4].map(i => parseInt(full.slice(i, i + 2), 16));
+};
+const rgbToHex = rgb => '#' + rgb
+    .map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
+    .join('');
+const mixRgb = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const luminance = rgb => {
+    const [r, g, b] = rgb.map(v => {
+        const c = v / 255;
+        return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const fgFor = hex => {
+    const rgb = hexToRgb(hex);
+    return rgb && luminance(rgb) > 0.45 ? '#101418' : '#ffffff';
+};
+// t < 0 darkens towards black, t > 0 lightens towards white.
+const shade = (hex, t) => {
+    const rgb = hexToRgb(hex) ?? [0, 0, 0];
+    return rgbToHex(mixRgb(rgb, t < 0 ? [0, 0, 0] : [255, 255, 255], Math.abs(t)));
 };
 
-// Three sizes, picked from the grip bar.  Measured on this tablet (1696px-wide
-// logical screen, logged by _reflow):
+// Returns a complete theme, or null when the five colours are not all valid.
+function makeCustomTheme(source) {
+    if (!source)
+        return null;
+    const need = ['panel', 'key', 'mod', 'act', 'on'];
+    for (const role of need) {
+        if (!hexToRgb(source[role]))
+            return null;
+    }
+    const {panel, key, mod, act, on} = source;
+    const glyph = fgFor(key);
+    return {
+        name: CUSTOM_THEME, label: '自定义',
+        panel: hexToRgb(panel).join(','),
+        panelAlpha: 1.0,
+        panelAlt: 'rgba(0,0,0,0.25)',
+        key: [key, glyph],
+        mod: [mod, fgFor(mod)],
+        act: [act, fgFor(act)],
+        on: [on, fgFor(on)],
+        // chrome follows the panel/key so a light custom palette does not
+        // inherit the dark presets' bars
+        grip: [shade(panel, -0.22), fgFor(shade(panel, -0.22))],
+        btn: [shade(key, 0.08), fgFor(shade(key, 0.08))],
+        close: [shade(on, -0.6), fgFor(shade(on, -0.6))],
+        idle: [shade(key, -0.2), fgFor(shade(key, -0.2))],
+        accent: on,
+        accentFg: fgFor(on),
+        shift: [rgbToHex(mixRgb(hexToRgb(glyph), hexToRgb(key), 0.45)), glyph],
+        swatch: [panel, fgFor(panel)],
+    };
+}
+
+// Set by the extension from [layout] background=<path>; kept as a plain URI
+// string so this section stays free of gi:// imports (the style test slices it
+// out and runs it in bare Node).
+let BACKGROUND_URI = null;
+
+// Three sizes, picked from the ⚙ settings sheet.  Measured on this tablet
+// (1696px-wide logical screen, logged by _reflow):
 //
 //     scale 0.72 -> 927x349  (55%)
 //     scale 0.85 -> 1120x421 (66%)
@@ -89,9 +257,9 @@ const COLORS = {
 // The 1.00 design baseline stays in the px values; the steps just sit around
 // it.  Earlier attempts used 1310px from the design notes as the panel width at
 // 1.00 and came out one size too wide everywhere.
-// ~/.config/erhai-osk/position.kf ([layout] scale_small= / scale_medium= /
-// scale_large=) can override all three, so tuning needs neither a rebuild nor
-// a re-login.
+// ~/.config/pad-osk/position.kf ([layout] scale_small= / scale_medium= /
+// scale_large=, plus size= and theme=) can override all three, so tuning needs
+// neither a rebuild nor a re-login.
 const SIZE_STEPS = [
     {name: 'small', label: '小', scale: 0.72},
     {name: 'medium', label: '中', scale: 0.85},
@@ -108,48 +276,110 @@ function findStep(steps, name) {
 // Whole pixels only: fractional sizes give blurry glyphs in St.
 const px = (value, scale) => `${Math.max(1, Math.round(value * scale))}px`;
 
+// 圆角: one number drives every rounded corner.  The default 8 reproduces the
+// original design exactly (keys 8, panel 16, grip 10, small buttons 8, sheet
+// 12); larger steps round the keys into pills, 0 makes them square.
+const RADIUS_STEPS = [
+    {value: 0, label: '直角'},
+    {value: 8, label: '小'},
+    {value: 16, label: '中'},
+    {value: 26, label: '大'},
+];
+const DEFAULT_RADIUS = 8;
+const RADIUS_MIN = 0;
+const RADIUS_MAX = 40;
+let RADIUS = DEFAULT_RADIUS;
+
+// Derived radii keep the proportions of the shipped look at every step.
+const radiusKey = () => RADIUS;
+const radiusPanel = () => Math.max(16, RADIUS * 2);
+const radiusGrip = () => Math.max(10, RADIUS + 2);
+const radiusSmall = () => Math.max(8, RADIUS);
+const radiusSheet = () => Math.max(12, RADIUS + 4);
+
+// px() floors at 1px so no border ever vanishes by accident; a corner radius is
+// the one place where 0 is a real value (直角), so it gets its own helper.
+const pxSoft = (value, scale) => value <= 0
+    ? '0px'
+    : `${Math.max(1, Math.round(value * scale))}px`;
+
+// A key kind that the current theme does not name falls back to a plain key,
+// so a typo in LAYOUT can never render an invisible button.
 function keyStyle(kind, minWidth, scale = 1) {
-    return `${COLORS[kind]} border-radius: ${px(8, scale)};`
+    const [bg, fg] = THEME[kind] ?? THEME.key;
+    return `background-color: ${bg}; color: ${fg};`
+        + ` border-radius: ${pxSoft(radiusKey(), scale)};`
         + ` padding: ${px(14, scale)} ${px(6, scale)};`
         + ` margin: ${px(3, scale)};`
         + ` font-size: ${px(24, scale)};`
         + ` min-width: ${px(minWidth, scale)};`;
 }
 
-const boxStyle = scale =>
-    'background-color: rgba(18,20,22,0.97);'
-    + ` border-radius: ${px(16, scale)}; padding: ${px(10, scale)};`;
+const boxStyle = scale => {
+    const css = `background-color: rgba(${THEME.panel}, ${THEME.panelAlpha.toFixed(2)});`
+        + ` border-radius: ${pxSoft(radiusPanel(), scale)};`
+        + ` padding: ${px(10, scale)};`;
+    // User-supplied backdrop: cover the whole panel, cropped rather than
+    // stretched, and faded by the same actor opacity as everything else.
+    return BACKGROUND_URI
+        ? `${css} background-image: url("${BACKGROUND_URI}"); background-size: cover;`
+        : css;
+};
 
 const gripStyle = scale =>
-    'background-color: #33373b; color: #b0b8c0;'
-    + ` border-radius: ${px(10, scale)};`
+    `background-color: ${THEME.grip[0]}; color: ${THEME.grip[1]};`
+    + ` border-radius: ${pxSoft(radiusGrip(), scale)};`
     + ` padding: ${px(8, scale)} ${px(20, scale)};`
     + ` margin: ${px(3, scale)}; font-size: ${px(17, scale)};`;
 
 const gripBtnStyle = scale =>
-    'background-color: #474c52; color: #ffd479;'
-    + ` border-radius: ${px(8, scale)};`
+    `background-color: ${THEME.btn[0]}; color: ${THEME.btn[1]};`
+    + ` border-radius: ${pxSoft(radiusSmall(), scale)};`
     + ` padding: ${px(5, scale)} ${px(20, scale)};`
     + ` margin: ${px(3, scale)} ${px(3, scale)} ${px(3, scale)} ${px(12, scale)};`
     + ` font-size: ${px(22, scale)};`;
 
 const closeBtnStyle = scale =>
-    'background-color: #553a3a; color: #ffabab;'
-    + ` border-radius: ${px(8, scale)};`
+    `background-color: ${THEME.close[0]}; color: ${THEME.close[1]};`
+    + ` border-radius: ${pxSoft(radiusSmall(), scale)};`
     + ` padding: ${px(5, scale)} ${px(20, scale)};`
     + ` margin: ${px(3, scale)}; font-size: ${px(22, scale)};`;
 
 // The size selector reads as a segmented control: the active step is filled,
-// the other two stay quiet so they never compete with the keys.
+// the others stay quiet so they never compete with the keys.
 const sizeBtnStyle = (active, scale) =>
-    `background-color: ${active ? '#ffd479' : '#3c4147'};`
-    + ` color: ${active ? '#1e2022' : '#c9d1d9'};`
-    + ` border-radius: ${px(8, scale)};`
+    `background-color: ${active ? THEME.accent : THEME.idle[0]};`
+    + ` color: ${active ? THEME.accentFg : THEME.idle[1]};`
+    + ` border-radius: ${pxSoft(radiusSmall(), scale)};`
     + ` padding: ${px(5, scale)} ${px(16, scale)};`
     + ` margin: ${px(3, scale)}; font-size: ${px(20, scale)};`;
 
+// A theme button carries its own colours (that is the preview); the border is
+// what marks the active one.  The border is always drawn, in the swatch colour
+// when idle, so switching themes cannot leave a stale outline behind.
+const themeBtnStyle = (active, scale, theme) =>
+    `background-color: ${theme.swatch[0]}; color: ${theme.swatch[1]};`
+    + ` border: ${px(3, scale)} solid ${active ? THEME.accent : theme.swatch[0]};`
+    + ` border-radius: ${pxSoft(radiusSmall(), scale)};`
+    + ` padding: ${px(4, scale)} ${px(12, scale)};`
+    + ` margin: ${px(3, scale)}; font-size: ${px(18, scale)};`;
+
+// The settings sheet sits inside the panel, so it needs its own tint to read as
+// a separate surface; panelAlt is that tint per theme.
+const settingsPanelStyle = scale =>
+    `background-color: ${THEME.panelAlt};`
+    + ` border-radius: ${pxSoft(radiusSheet(), scale)};`
+    + ` padding: ${px(8, scale)};`
+    + ` margin: ${px(3, scale)} ${px(3, scale)} 0 ${px(3, scale)};`;
+
+const sectionLabelStyle = scale =>
+    `color: ${THEME.grip[1]};`
+    + ` font-size: ${px(16, scale)};`
+    + ` padding: ${px(2, scale)} ${px(12, scale)} ${px(2, scale)} ${px(4, scale)};`;
+
 const shiftGlyphStyle = (on, scale) =>
-    `color: ${on ? '#ffffff' : '#a8b0b8'}; font-size: ${px(15, scale)};`;
+    `color: ${on ? THEME.shift[1] : THEME.shift[0]};`
+    + ` font-size: ${px(15, scale)};`;
 
 // ---- key descriptors -------------------------------------------------
 const ch = (base, shifted, minW = 64) => ({base, shifted, minW, kind: 'key'});
@@ -214,8 +444,14 @@ function makeQsClasses(QS) {
             });
             this._kbd = kbd;
             this.connect('notify::checked', () => {
-                if (this._kbd)
-                    this._kbd._setVisible(this.checked);
+                // Ignore the echo of a programmatic sync.  Without this the
+                // extension hiding itself (file picker, modal dialog, initial
+                // state restore) flips the switch, and the switch writes "off"
+                // back into the state file -- so the keyboard never returns on
+                // its own and has to be turned on by hand every time.
+                if (!this._kbd || this._kbd._syncingToggle)
+                    return;
+                this._kbd._setVisible(this.checked);
             });
         }
     });
@@ -241,7 +477,7 @@ function makeQsClasses(QS) {
 
 export default class ErhaiOSK extends Extension {
     enable() {
-        log('erhai-osk: v14 enable (sizes, in-place visuals, shifted symbols)');
+        log('erhai-osk: v15 enable (settings sheet, themes, sizes, repeat)');
         try {
             const seat = this._makeSeat();
             if (!seat) {
@@ -273,14 +509,67 @@ export default class ErhaiOSK extends Extension {
             // in place (rebuilding would re-deliver an in-flight touch).
             this._styledKeys = [];
             this._sizeBtns = {};
+            this._themeBtns = {};
+            this._opacityBtns = {};
+            this._radiusBtns = {};
+            this._backgroundBtns = {};
+            this._bgMode = 'pick';
+            this._pendingDelete = null;
+            this._pendingDeleteTimeoutId = 0;
+            this._settingsOpen = false;
+            // Guards the Quick Settings switch against echoing our own
+            // programmatic checked= writes back into the state file.
+            this._syncingToggle = false;
+            this._pickerHidden = false;
+            this._pickerTimeoutId = 0;
 
-            // Restore the size before the rows are built, so the very first
-            // allocation is already the right size (no visible jump).
+            // The config directory follows the package name now
+            // (~/.config/pad-osk); copy the old one across once so an upgrade
+            // keeps position, size, palette and on/off state.
+            this._migrateConfig();
+
+            // Restore the size, palette, transparency and backdrop before the
+            // rows are built, so the very first allocation is already correct
+            // (no visible jump at startup).
             const cfg = this._loadConfig();
             this._steps = this._readScales(cfg);
             this._sizeName = cfg && this._steps.some(s => s.name === cfg.size)
                 ? cfg.size : DEFAULT_SIZE;
             this._scale = findStep(this._steps, this._sizeName).scale;
+
+            // The custom palette has to exist before the remembered theme name
+            // is resolved, because 'custom' is only a valid choice once it does.
+            this._custom = makeCustomTheme(cfg ? cfg.custom : null);
+            this._themes = this._custom ? [...THEMES, this._custom] : [...THEMES];
+            this._themeName = cfg && this._themes.some(t => t.name === cfg.theme)
+                ? cfg.theme : DEFAULT_THEME;
+            THEME = this._themes.find(t => t.name === this._themeName);
+
+            this._opacity = cfg && typeof cfg.opacity === 'number'
+                ? Math.min(1, Math.max(OPACITY_MIN, cfg.opacity))
+                : DEFAULT_OPACITY;
+            OPACITY = this._opacity;
+            this._radius = cfg && typeof cfg.radius === 'number'
+                ? Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, Math.round(cfg.radius)))
+                : DEFAULT_RADIUS;
+            RADIUS = this._radius;
+            this._background = cfg ? cfg.background : null;
+            // "无" only switches the picture off; the path stays remembered so
+            // tapping its button again brings it back.  An absent key means the
+            // old shape of the file, where a stored path was always shown.
+            this._backgroundOn = !!this._background
+                && (cfg.backgroundEnabled === null
+                    || cfg.backgroundEnabled === undefined
+                    || !!cfg.backgroundEnabled);
+            BACKGROUND_URI = this._backgroundOn
+                ? this._backgroundUri(this._background) : null;
+            // Give the backdrop folder a home, so "how do I add a picture?" is
+            // answered by a directory that already exists.
+            try {
+                GLib.mkdir_with_parents(this._backgroundDir(), 0o755);
+            } catch (e) {
+                log(`erhai-osk: background dir failed: ${e}`);
+            }
             this._savedConfig = cfg;
 
             this._hidden = false;
@@ -305,8 +594,12 @@ export default class ErhaiOSK extends Extension {
                 x_align: Clutter.ActorAlign.START,
                 y_align: Clutter.ActorAlign.START,
             });
+            // Apply the remembered transparency before the first paint, so the
+            // panel never flashes opaque on login.
+            this._box.opacity = Math.round(OPACITY * 255);
 
             this._buildGrip();
+            this._buildSettings();
             this._rowsBox = new St.BoxLayout({vertical: true, reactive: false});
             this._buildRows();
             this._box.add_child(this._rowsBox);
@@ -337,9 +630,9 @@ export default class ErhaiOSK extends Extension {
                 .then(QS => this._addQuickSettings(QS))
                 .catch(e => log(`erhai-osk: quick settings unavailable: ${e}`));
 
-            log('erhai-osk: v14 enabled');
+            log('erhai-osk: v15 enabled');
         } catch (e) {
-            log(`erhai-osk: v14 enable failed: ${e}`);
+            log(`erhai-osk: v15 enable failed: ${e}`);
         }
     }
 
@@ -391,10 +684,39 @@ export default class ErhaiOSK extends Extension {
         this._modButtons = [];
         this._styledKeys = [];
         this._sizeBtns = {};
+        this._themeBtns = {};
+        this._opacityBtns = {};
+        this._radiusBtns = {};
+        this._backgroundBtns = {};
+        this._bgMode = 'pick';
+        this._cancelDeleteBackground(false);
+        this._bgRow = null;
+        this._resetBtn = null;
+        this._sectionLabels = [];
+        this._settings = null;
+        this._settingsBtn = null;
         this._savedConfig = null;
+        this._custom = null;
+        this._themes = [...THEMES];
+        this._background = null;
+        this._backgroundOn = false;
+        // Back to the shipping palette, opacity and backdrop: module-scope
+        // THEME/OPACITY/BACKGROUND_URI outlive this instance, and a disabled
+        // extension must not leave them swapped.
+        THEME = THEMES.find(t => t.name === DEFAULT_THEME);
+        this._opacity = DEFAULT_OPACITY;
+        OPACITY = DEFAULT_OPACITY;
+        this._radius = DEFAULT_RADIUS;
+        RADIUS = DEFAULT_RADIUS;
+        BACKGROUND_URI = null;
+        if (this._pickerTimeoutId) {
+            GLib.source_remove(this._pickerTimeoutId);
+            this._pickerTimeoutId = 0;
+        }
+        this._pickerHidden = false;
         this._repeatCancel();
         this._vdev = null;
-        log('erhai-osk: v14 disabled');
+        log('erhai-osk: v15 disabled');
     }
 
     _makeSeat() {
@@ -451,22 +773,17 @@ export default class ErhaiOSK extends Extension {
         this._dragArea.connect('touch-event', this._onGripTouch.bind(this));
         this._grip.add_child(this._dragArea);
 
-        // 小 / 中 / 大 -- a segmented control, the active step filled.
-        for (const step of this._steps) {
-            const btn = new St.Button({
-                child: new St.Label({
-                    text: step.label,
-                    y_align: Clutter.ActorAlign.CENTER,
-                }),
-                style: sizeBtnStyle(step.name === this._sizeName, this._scale),
-                reactive: true,
-                can_focus: false,
-                track_hover: true,
-            });
-            btn.connect('clicked', () => this._setSize(step.name));
-            this._grip.add_child(btn);
-            this._sizeBtns[step.name] = btn;
-        }
+        // ⚙ -- the size and the palette both moved in here; the grip bar only
+        // keeps the controls you reach for mid-sentence.
+        this._settingsBtn = new St.Button({
+            child: new St.Label({text: '⚙', y_align: Clutter.ActorAlign.CENTER}),
+            style: gripBtnStyle(this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._settingsBtn.connect('clicked', () => this._toggleSettings());
+        this._grip.add_child(this._settingsBtn);
 
         this._collapseBtn = new St.Button({
             child: new St.Label({text: '⌄', y_align: Clutter.ActorAlign.CENTER}),
@@ -489,6 +806,717 @@ export default class ErhaiOSK extends Extension {
         this._grip.add_child(this._closeBtn);
 
         this._box.add_child(this._grip);
+    }
+
+    // ---- settings sheet (⚙: 大小 + 颜色) -------------------------------
+    // An inline sheet, not a St.PopupMenu: a popup takes a shell grab, and
+    // grabs are exactly what makes touch unreliable here (see the click-gesture
+    // note in _attachRepeat).  A sheet inside the panel needs no grab at all,
+    // and it reflows the panel the same way a size change already does.
+    _buildSettings() {
+        this._settings = new St.BoxLayout({
+            vertical: true,
+            reactive: true,
+            visible: false,
+            style: settingsPanelStyle(this._scale),
+        });
+        this._sectionLabels = [];
+
+        const sizeRow = new St.BoxLayout({reactive: false});
+        sizeRow.add_child(this._sectionLabel('大小'));
+        for (const step of this._steps) {
+            const btn = new St.Button({
+                child: new St.Label({
+                    text: step.label,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+                style: sizeBtnStyle(step.name === this._sizeName, this._scale),
+                reactive: true,
+                can_focus: false,
+                track_hover: true,
+            });
+            btn.connect('clicked', () => this._setSize(step.name));
+            sizeRow.add_child(btn);
+            this._sizeBtns[step.name] = btn;
+        }
+        this._settings.add_child(sizeRow);
+
+        const themeRow = new St.BoxLayout({reactive: false});
+        themeRow.add_child(this._sectionLabel('颜色'));
+        for (const theme of this._themes) {
+            const btn = new St.Button({
+                child: new St.Label({
+                    text: theme.label,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+                style: themeBtnStyle(
+                    theme.name === this._themeName, this._scale, theme),
+                reactive: true,
+                can_focus: false,
+                track_hover: true,
+            });
+            btn.connect('clicked', () => this._setTheme(theme.name));
+            themeRow.add_child(btn);
+            this._themeBtns[theme.name] = btn;
+        }
+        this._settings.add_child(themeRow);
+
+        const opacityRow = new St.BoxLayout({reactive: false});
+        opacityRow.add_child(this._sectionLabel('透明'));
+        for (const step of OPACITY_STEPS) {
+            const btn = new St.Button({
+                child: new St.Label({
+                    text: `${step.label}%`,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+                style: sizeBtnStyle(
+                    Math.abs(step.value - this._opacity) < 0.001, this._scale),
+                reactive: true,
+                can_focus: false,
+                track_hover: true,
+            });
+            btn.connect('clicked', () => this._setOpacity(step.value));
+            opacityRow.add_child(btn);
+            this._opacityBtns[step.value] = btn;
+        }
+        this._settings.add_child(opacityRow);
+
+        const radiusRow = new St.BoxLayout({reactive: false});
+        radiusRow.add_child(this._sectionLabel('圆角'));
+        for (const step of RADIUS_STEPS) {
+            const btn = new St.Button({
+                child: new St.Label({
+                    text: step.label,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+                style: sizeBtnStyle(
+                    Math.abs(step.value - this._radius) < 0.001, this._scale),
+                reactive: true,
+                can_focus: false,
+                track_hover: true,
+            });
+            btn.connect('clicked', () => this._setRadius(step.value));
+            radiusRow.add_child(btn);
+            this._radiusBtns[step.value] = btn;
+        }
+        this._settings.add_child(radiusRow);
+
+        // 背景 and 默认 rows.  The background row is (re)filled every time the
+        // sheet opens, and the reset button lives in its own row.
+        this._bgRow = new St.BoxLayout({reactive: false});
+        this._settings.add_child(this._bgRow);
+        this._buildResetRow();
+
+        this._box.add_child(this._settings);
+    }
+
+    // ---- backdrop + reset -------------------------------------------
+    // One-way move from ~/.config/erhai-osk to ~/.config/pad-osk.  Runs only
+    // when the new directory does not exist yet, so a downgrade or a second
+    // upgrade never overwrites newer settings with older ones.
+    _migrateConfig() {
+        try {
+            const root = GLib.get_user_config_dir();
+            const oldDir = GLib.build_filenamev([root, 'erhai-osk']);
+            const newDir = GLib.build_filenamev([root, 'pad-osk']);
+            if (!GLib.file_test(oldDir, GLib.FileTest.IS_DIR))
+                return;
+            if (GLib.file_test(newDir, GLib.FileTest.IS_DIR))
+                return;
+
+            GLib.mkdir_with_parents(newDir, 0o755);
+            const copy = (from, to) => {
+                try {
+                    const [ok, bytes] = GLib.file_get_contents(from);
+                    if (ok)
+                        GLib.file_set_contents(to, bytes);
+                } catch (e) {
+                    log(`erhai-osk: migrate ${from} failed: ${e}`);
+                }
+            };
+            for (const name of ['position.kf', 'visible']) {
+                const from = GLib.build_filenamev([oldDir, name]);
+                if (GLib.file_test(from, GLib.FileTest.EXISTS))
+                    copy(from, GLib.build_filenamev([newDir, name]));
+            }
+
+            const oldBg = GLib.build_filenamev([oldDir, 'backgrounds']);
+            if (GLib.file_test(oldBg, GLib.FileTest.IS_DIR)) {
+                const newBg = GLib.build_filenamev([newDir, 'backgrounds']);
+                GLib.mkdir_with_parents(newBg, 0o755);
+                const iter = Gio.File.new_for_path(oldBg).enumerate_children(
+                    'standard::name', Gio.FileQueryInfoFlags.NONE, null);
+                let info;
+                while ((info = iter.next_file(null)) !== null) {
+                    copy(GLib.build_filenamev([oldBg, info.get_name()]),
+                        GLib.build_filenamev([newBg, info.get_name()]));
+                }
+                iter.close(null);
+            }
+            log('erhai-osk: migrated ~/.config/erhai-osk -> ~/.config/pad-osk');
+        } catch (e) {
+            log(`erhai-osk: config migration failed: ${e}`);
+        }
+    }
+
+    // The keyboard is chrome, so it paints *above* every window -- including
+    // the chooser.  Step out of the way while the picker is up and come back
+    // when it closes, whichever way it closes.
+    _yieldForPicker() {
+        if (this._hidden)
+            return;                     // already out of the way
+        if (this._pickerHidden)
+            return;                     // one picker at a time
+        this._pickerHidden = true;
+        this._setVisible(false, false); // don't touch the on/off state file
+        // Safety net: a portal that never answers must not leave the keyboard
+        // hidden forever.
+        this._pickerTimeoutId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, 180000, () => {
+                this._pickerTimeoutId = 0;
+                log('erhai-osk: picker timeout, restoring keyboard');
+                this._restoreAfterPicker();
+                return GLib.SOURCE_REMOVE;
+            });
+    }
+
+    _restoreAfterPicker() {
+        if (this._pickerTimeoutId) {
+            GLib.source_remove(this._pickerTimeoutId);
+            this._pickerTimeoutId = 0;
+        }
+        if (!this._pickerHidden)
+            return;
+        this._pickerHidden = false;
+        // Unconditional: the keyboard was visible when the picker opened, so it
+        // goes back regardless of what the state file says.  (Reading the file
+        // here used to lose the keyboard, because the Quick Settings echo wrote
+        // "off" while it was hidden.)
+        this._setVisible(true, false);
+    }
+
+    // Images are picked with the desktop's own chooser (XDG portal), which is
+    // the dialog the user already knows.  A shell chrome actor cannot open a
+    // GTK dialog itself, so this goes through the portal service, with zenity
+    // as a fallback for systems without one.
+    _pickBackground() {
+        this._yieldForPicker();
+        try {
+            const bus = Gio.DBus.session;
+            const unique = bus.get_unique_name() ?? '';
+            const token = `padosk${Date.now()}`;
+            const sender = unique.replace(/^:/, '').replace(/\./g, '_');
+            const handle = `/org/freedesktop/portal/desktop/request/${sender}/${token}`;
+            let subId = 0;
+            subId = bus.signal_subscribe(
+                'org.freedesktop.portal.Desktop',
+                'org.freedesktop.portal.Request', 'Response', handle, null,
+                Gio.DBusSignalFlags.NONE,
+                (_conn, _from, _path, _iface, _signal, params) => {
+                    bus.signal_unsubscribe(subId);
+                    const [response, results] = params.deep_unpack();
+                    if (response !== 0) {
+                        log(`erhai-osk: file chooser closed (${response})`);
+                        this._restoreAfterPicker();
+                        return;
+                    }
+                    const raw = results.uris;
+                    const uris = raw && raw.deep_unpack ? raw.deep_unpack() : [];
+                    if (uris.length) {
+                        const path = Gio.File.new_for_uri(uris[0]).get_path();
+                        if (path)
+                            this._setBackground(this._importBackground(path));
+                    }
+                    this._restoreAfterPicker();
+                    // Safe to rebuild here: the chooser has already closed, so
+                    // no touch is in flight on the row's buttons.
+                    if (this._settingsOpen)
+                        this._buildBackgroundRow();
+                });
+
+            const options = {
+                handle_token: new GLib.Variant('s', token),
+                multiple: new GLib.Variant('b', false),
+                filters: new GLib.Variant('a(sa(us))', [
+                    ['图片', [[0, '*.png'], [0, '*.jpg'], [0, '*.jpeg'],
+                        [0, '*.webp']]],
+                ]),
+            };
+            bus.call('org.freedesktop.portal.Desktop',
+                '/org/freedesktop/portal/desktop',
+                'org.freedesktop.portal.FileChooser', 'OpenFile',
+                new GLib.Variant('(ssa{sv})', ['', '选择键盘背景', options]),
+                null, Gio.DBusCallFlags.NONE, -1, null,
+                (_conn, res) => {
+                    try {
+                        bus.call_finish(res);
+                    } catch (e) {
+                        log(`erhai-osk: portal chooser failed: ${e}, trying zenity`);
+                        this._pickBackgroundZenity();
+                    }
+                });
+        } catch (e) {
+            log(`erhai-osk: portal unavailable: ${e}, trying zenity`);
+            this._pickBackgroundZenity();
+        }
+    }
+
+    _pickBackgroundZenity() {
+        try {
+            const proc = Gio.Subprocess.new(
+                ['zenity', '--file-selection', '--title=选择键盘背景',
+                    '--file-filter=图片 | *.png *.jpg *.jpeg *.webp'],
+                Gio.SubprocessFlags.STDOUT_PIPE);
+            proc.communicate_utf8_async(null, null, (p, res) => {
+                try {
+                    const [, stdout] = p.communicate_utf8_finish(res);
+                    const path = (stdout ?? '').trim();
+                    if (path) {
+                        this._setBackground(this._importBackground(path));
+                        if (this._settingsOpen)
+                            this._buildBackgroundRow();
+                    }
+                } catch (e) {
+                    log(`erhai-osk: zenity picker failed: ${e}`);
+                }
+                this._restoreAfterPicker();
+            });
+        } catch (e) {
+            log(`erhai-osk: no image picker available: ${e}`);
+            this._restoreAfterPicker();
+        }
+    }
+
+    _backgroundDir() {
+        return GLib.build_filenamev(
+            [GLib.get_user_config_dir(), 'pad-osk', 'backgrounds']);
+    }
+
+    _backgroundFiles() {
+        const dirPath = this._backgroundDir();
+        try {
+            if (!GLib.file_test(dirPath, GLib.FileTest.IS_DIR))
+                return [];
+            // Gio enumeration rather than GLib.dir_read_names(): the latter is
+            // GLib 2.80+ and its GJS binding is easy to get wrong, while
+            // enumerate_children() is stable across every shell version here.
+            const dir = Gio.File.new_for_path(dirPath);
+            const iter = dir.enumerate_children(
+                'standard::name', Gio.FileQueryInfoFlags.NONE, null);
+            const names = [];
+            let info;
+            while ((info = iter.next_file(null)) !== null) {
+                const name = info.get_name();
+                if (/\.(png|jpe?g|webp)$/i.test(name))
+                    names.push(name);
+            }
+            iter.close(null);
+            names.sort();
+            return names.map(n => GLib.build_filenamev([dirPath, n]));
+        } catch (e) {
+            log(`erhai-osk: background list failed: ${e}`);
+            return [];
+        }
+    }
+
+    _backgroundUri(path) {
+        if (!path)
+            return null;
+        try {
+            if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
+                log(`erhai-osk: background missing: ${path}`);
+                return null;
+            }
+            return GLib.filename_to_uri(path, null);
+        } catch (e) {
+            log(`erhai-osk: background uri failed: ${e}`);
+            return null;
+        }
+    }
+
+    _buildBackgroundRow() {
+        if (!this._bgRow)
+            return;
+        this._bgRow.destroy_all_children();
+        this._backgroundBtns = {};
+        // The old buttons are gone with the children; drop the references so a
+        // later _applyScale() cannot poke a disposed actor.
+        this._pickBtn = null;
+        this._manageBtn = null;
+        this._bgRow.add_child(new St.Label({
+            text: this._bgMode === 'manage' ? '管理' : '背景',
+            y_align: Clutter.ActorAlign.CENTER,
+            style: sectionLabelStyle(this._scale),
+        }));
+
+        const button = (label, active, onActivate, extraStyle = '') => {
+            const btn = new St.Button({
+                child: new St.Label({
+                    text: label,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+                style: sizeBtnStyle(active, this._scale) + extraStyle,
+                reactive: true,
+                can_focus: false,
+                track_hover: true,
+            });
+            btn.connect('clicked', onActivate);
+            this._bgRow.add_child(btn);
+            return btn;
+        };
+
+        if (this._bgMode === 'manage')
+            return this._buildBackgroundManageRow(button);
+
+        const add = (value, label) => {
+            const btn = button(label, this._backgroundActive(value),
+                () => this._setBackground(value));
+            this._backgroundBtns[value ?? '__none__'] = btn;
+        };
+
+        add(null, '无');
+
+        const files = this._backgroundFiles();
+        // A picture picked with the system chooser can live anywhere, so show it
+        // even when it is not inside the backgrounds folder.
+        if (this._background && !files.includes(this._background))
+            files.unshift(this._background);
+        for (const file of files) {
+            const base = GLib.path_get_basename(file).replace(/\.[^.]+$/, '');
+            add(file, base.length > 10 ? `${base.slice(0, 10)}…` : base);
+        }
+
+        this._pickBtn = button('选图…', false, () => this._pickBackground());
+        this._manageBtn = button('管理…', false, () => {
+            this._bgMode = 'manage';
+            this._buildBackgroundRow();
+        });
+
+        if (!files.length && !this._background) {
+            this._bgRow.add_child(new St.Label({
+                text: '（也可把图片放进 ~/.config/pad-osk/backgrounds/）',
+                y_align: Clutter.ActorAlign.CENTER,
+                style: sectionLabelStyle(this._scale),
+            }));
+        }
+    }
+
+    // Screen 2 of the 背景 row: every stored picture with its own delete
+    // button, plus a way back.  Deleting a file is the only thing that really
+    // forgets a backdrop -- 无 and 恢复默认 both keep the remembered path.
+    _buildBackgroundManageRow(button) {
+        button('返回', false, () => {
+            this._cancelDeleteBackground(false);
+            this._bgMode = 'pick';
+            this._buildBackgroundRow();
+        });
+
+        const files = this._backgroundFiles();
+        // The picture in use may live outside the folder (a path typed into
+        // position.kf by hand), and it must still be listed and deletable.
+        if (this._background && !files.includes(this._background))
+            files.unshift(this._background);
+        if (!files.length) {
+            this._bgRow.add_child(new St.Label({
+                text: '（这里还没有图片）',
+                y_align: Clutter.ActorAlign.CENTER,
+                style: sectionLabelStyle(this._scale),
+            }));
+            return;
+        }
+
+        for (const file of files) {
+            const base = GLib.path_get_basename(file).replace(/\.[^.]+$/, '');
+            const name = base.length > 8 ? `${base.slice(0, 8)}…` : base;
+            const group = new St.BoxLayout({reactive: false});
+            group.add_child(new St.Button({
+                child: new St.Label({
+                    text: name,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+                style: sizeBtnStyle(
+                    this._backgroundActive(file), this._scale),
+                reactive: true,
+                can_focus: false,
+                track_hover: true,
+            }));
+            const applyBtn = group.get_last_child();
+            applyBtn.connect('clicked', () => this._setBackground(file));
+
+            if (this._pendingDelete === file) {
+                // Second step of the confirmation: the ✕ became two buttons.
+                const confirm = new St.Button({
+                    child: new St.Label({
+                        text: '确认删',
+                        y_align: Clutter.ActorAlign.CENTER,
+                    }),
+                    style: `${sizeBtnStyle(true, this._scale)}`
+                        + ' color: #5a1010;',
+                    reactive: true,
+                    can_focus: false,
+                    track_hover: true,
+                });
+                confirm.connect('clicked', () => this._confirmDeleteBackground(file));
+                group.add_child(confirm);
+
+                const cancel = new St.Button({
+                    child: new St.Label({
+                        text: '取消',
+                        y_align: Clutter.ActorAlign.CENTER,
+                    }),
+                    style: sizeBtnStyle(false, this._scale),
+                    reactive: true,
+                    can_focus: false,
+                    track_hover: true,
+                });
+                cancel.connect('clicked', () => this._cancelDeleteBackground());
+                group.add_child(cancel);
+            } else {
+                const del = new St.Button({
+                    child: new St.Label({
+                        text: '✕',
+                        y_align: Clutter.ActorAlign.CENTER,
+                    }),
+                    style: `${sizeBtnStyle(false, this._scale)}`
+                        + ' color: #ff9a9a;',
+                    reactive: true,
+                    can_focus: false,
+                    track_hover: true,
+                });
+                del.connect('clicked', () => this._requestDeleteBackground(file));
+                group.add_child(del);
+            }
+            this._bgRow.add_child(group);
+        }
+    }
+
+    // Deleting a file is destructive and a tablet tap is easy to misfire, so
+    // the first ✕ only arms the delete; it needs a second, explicit tap within
+    // five seconds.  Anything else (返回, the timer, closing the sheet) cancels.
+    _requestDeleteBackground(path) {
+        this._cancelDeleteBackground(false);
+        this._pendingDelete = path;
+        this._pendingDeleteTimeoutId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, 5000, () => {
+                this._pendingDeleteTimeoutId = 0;
+                this._pendingDelete = null;
+                if (this._settingsOpen)
+                    this._buildBackgroundRow();
+                return GLib.SOURCE_REMOVE;
+            });
+        this._buildBackgroundRow();
+    }
+
+    _cancelDeleteBackground(rebuild = true) {
+        if (this._pendingDeleteTimeoutId) {
+            GLib.source_remove(this._pendingDeleteTimeoutId);
+            this._pendingDeleteTimeoutId = 0;
+        }
+        if (!this._pendingDelete)
+            return;
+        this._pendingDelete = null;
+        if (rebuild && this._settingsOpen)
+            this._buildBackgroundRow();
+    }
+
+    _confirmDeleteBackground(path) {
+        this._cancelDeleteBackground(false);
+        this._deleteBackgroundFile(path);
+    }
+
+    _deleteBackgroundFile(path) {
+        try {
+            Gio.File.new_for_path(path).delete(null);
+        } catch (e) {
+            log(`erhai-osk: delete background failed: ${e}`);
+            return;
+        }
+        const wasCurrent = this._background === path;
+        if (wasCurrent) {
+            this._background = null;
+            this._backgroundOn = false;
+            BACKGROUND_URI = null;
+        }
+        this._applyScale();
+        this._saveConfig();
+        log(`erhai-osk: deleted background ${path}`
+            + (wasCurrent ? ' (was in use, cleared)' : ''));
+        if (this._settingsOpen)
+            this._buildBackgroundRow();
+    }
+
+    // Which button in the 背景 row reads as selected: 无 is selected when the
+    // backdrop is switched off, an image when it is on *and* that image is the
+    // remembered one.
+    _backgroundActive(value) {
+        if (value === null)
+            return !this._backgroundOn;
+        return !!this._backgroundOn && this._background === value;
+    }
+
+    _updateBackgroundButtons() {
+        for (const [key, btn] of Object.entries(this._backgroundBtns ?? {})) {
+            const value = key === '__none__' ? null : key;
+            btn.style = sizeBtnStyle(this._backgroundActive(value), this._scale);
+        }
+    }
+
+    // Picking an image turns it on; picking 无 switches it off but keeps the
+    // last path, so the picture is one tap away instead of a trip through the
+    // file chooser.  Only deleting the file forgets it for good.
+    _setBackground(path) {
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        if (path) {
+            const uri = this._backgroundUri(path);
+            if (!uri)
+                return;
+            this._background = path;
+            this._backgroundOn = true;
+            BACKGROUND_URI = uri;
+        } else {
+            this._backgroundOn = false;
+            BACKGROUND_URI = null;
+        }
+        this._applyScale();
+        this._saveConfig();
+        this._updateBackgroundButtons();
+        log(`erhai-osk: background -> ${this._backgroundOn
+            ? this._background : `(off, kept ${this._background ?? 'none'})`}`);
+        this._reflow(oldHeight);
+    }
+
+    // Copies a picture chosen anywhere on disk into the backdrop folder, so it
+    // shows up in 管理 (where it can be switched or deleted) and keeps working
+    // if the original is moved.  Returns the path to use.
+    _importBackground(path) {
+        try {
+            const dir = this._backgroundDir();
+            if (GLib.path_get_dirname(path) === dir)
+                return path;             // already in the folder
+            GLib.mkdir_with_parents(dir, 0o755);
+            const base = GLib.path_get_basename(path);
+            const stem = base.replace(/\.[^.]+$/, '');
+            const ext = (base.match(/\.[^.]+$/) ?? [''])[0];
+            let dest = GLib.build_filenamev([dir, base]);
+            for (let n = 1; GLib.file_test(dest, GLib.FileTest.EXISTS); n++)
+                dest = GLib.build_filenamev([dir, `${stem}-${n}${ext}`]);
+            Gio.File.new_for_path(path).copy(
+                Gio.File.new_for_path(dest),
+                Gio.FileCopyFlags.OVERWRITE, null, null);
+            log(`erhai-osk: imported background -> ${dest}`);
+            return dest;
+        } catch (e) {
+            log(`erhai-osk: background import failed: ${e}`);
+            return path;                 // use the original location instead
+        }
+    }
+
+    _buildResetRow() {
+        const row = new St.BoxLayout({reactive: false});
+        row.add_child(this._sectionLabel('默认'));
+        this._resetBtn = new St.Button({
+            child: new St.Label({
+                text: '恢复默认',
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+            style: sizeBtnStyle(false, this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._resetBtn.connect('clicked', () => this._resetDefaults());
+        row.add_child(this._resetBtn);
+        this._settings.add_child(row);
+    }
+
+    // Back to the shipping look and the default spot: medium, graphite, fully
+    // opaque, no backdrop, bottom centre.  [custom] is left alone -- it is the
+    // user's own palette, not a setting this button owns.
+    _resetDefaults() {
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._steps = this._readScales();
+        this._sizeName = DEFAULT_SIZE;
+        this._scale = findStep(this._steps, DEFAULT_SIZE).scale;
+        this._themeName = DEFAULT_THEME;
+        THEME = this._themes.find(t => t.name === DEFAULT_THEME);
+        this._opacity = DEFAULT_OPACITY;
+        OPACITY = DEFAULT_OPACITY;
+        this._radius = DEFAULT_RADIUS;
+        RADIUS = DEFAULT_RADIUS;
+        // The backdrop is only switched off, not forgotten: resetting the look
+        // should not cost the user the picture they picked.  Deleting it is the
+        // 管理 background screen's job.
+        this._backgroundOn = false;
+        BACKGROUND_URI = null;
+        this._applyScale();
+        this._saveConfig();
+        log('erhai-osk: reset to defaults');
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            if (this._box && this._placed) {
+                this._placeDefault();
+                this._saveConfig();
+            }
+            return GLib.SOURCE_REMOVE;
+        });
+        this._reflow(oldHeight);
+    }
+
+    _sectionLabel(text) {
+        const label = new St.Label({
+            text,
+            y_align: Clutter.ActorAlign.CENTER,
+            style: sectionLabelStyle(this._scale),
+        });
+        this._sectionLabels.push(label);
+        return label;
+    }
+
+    _toggleSettings() {
+        if (!this._settings)
+            return;
+        if (this._settingsOpen) {
+            this._closeSettings();
+            return;
+        }
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        // Re-scan the backgrounds folder on every open: dropping a new image in
+        // must not require a re-login.
+        this._buildBackgroundRow();
+        this._settingsOpen = true;
+        this._settings.visible = true;
+        this._reflow(oldHeight);
+    }
+
+    // Collapsing the panel or hiding the keyboard both put the sheet away, so a
+    // sheet is never left open on top of a keyboard that is not on screen.
+    // Callers that reflow themselves pass `false`: two pending reflows would
+    // each shift the panel by a height the other already accounted for.
+    _closeSettings(reflow = true) {
+        if (!this._settings || !this._settingsOpen)
+            return;
+        this._cancelDeleteBackground(false);
+        this._bgMode = 'pick';
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._settingsOpen = false;
+        this._settings.visible = false;
+        if (reflow)
+            this._reflow(oldHeight);
+    }
+
+    // ---- theme (深灰 / 浅色 / 暖色 / 高对比 / 自定义) -----------------
+    // Restyle in place, exactly like a size change: nothing is rebuilt, so a
+    // finger resting on a key keeps the button it started on.
+    _setTheme(name) {
+        const theme = this._themes.find(t => t.name === name);
+        if (!theme || theme.name === this._themeName)
+            return;
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        THEME = theme;
+        this._themeName = name;
+        this._applyScale();
+        this._saveConfig();
+        log(`erhai-osk: theme -> ${name}`);
+        this._reflow(oldHeight);
     }
 
     // ---- size (小 / 中 / 大) -----------------------------------------
@@ -515,6 +1543,23 @@ export default class ErhaiOSK extends Extension {
 
         // Keep the bottom edge where it is: the panel grows upward instead of
         // pushing itself off the bottom of the screen.
+        this._reflow(oldHeight);
+    }
+
+    // ---- transparency (100% .. 50%) ----------------------------------
+    // One actor-level alpha for the whole panel: keys, glyphs, grip bar and the
+    // settings sheet fade together, so it reads as a piece of glass rather than
+    // a see-through frame with solid keys on it.
+    _setOpacity(value) {
+        const clamped = Math.min(1, Math.max(OPACITY_MIN, Math.round(value * 100) / 100));
+        if (Math.abs(clamped - this._opacity) < 0.001)
+            return;
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._opacity = clamped;
+        OPACITY = clamped;
+        this._applyScale();
+        this._saveConfig();
+        log(`erhai-osk: opacity -> ${Math.round(clamped * 100)}%`);
         this._reflow(oldHeight);
     }
 
@@ -558,14 +1603,25 @@ export default class ErhaiOSK extends Extension {
 
     _applyScale() {
         const s = this._scale;
-        if (this._box)
+        if (this._box) {
             this._box.style = boxStyle(s);
+            // Whole-panel transparency (0-255): mutter paints the actor and
+            // every child with this alpha, which is exactly "the whole keyboard
+            // fades", with no per-key style to keep in sync.
+            this._box.opacity = Math.round(OPACITY * 255);
+        }
         if (this._grip)
             this._grip.style = gripStyle(s);
+        if (this._settingsBtn)
+            this._settingsBtn.style = gripBtnStyle(s);
         if (this._collapseBtn)
             this._collapseBtn.style = gripBtnStyle(s);
         if (this._closeBtn)
             this._closeBtn.style = closeBtnStyle(s);
+        if (this._settings)
+            this._settings.style = settingsPanelStyle(s);
+        for (const label of this._sectionLabels ?? [])
+            label.style = sectionLabelStyle(s);
         for (const {btn, kind, minW, mod} of this._styledKeys) {
             const active = mod ? this._modActive(mod) : false;
             btn.style = keyStyle(active ? 'on' : kind, minW, s);
@@ -573,6 +1629,26 @@ export default class ErhaiOSK extends Extension {
         for (const glyph of this._shiftGlyphs)
             glyph.style = shiftGlyphStyle(this._shift, s);
         this._updateSizeButtons();
+        this._updateThemeButtons();
+        this._updateOpacityButtons();
+        this._updateRadiusButtons();
+        if (this._resetBtn)
+            this._resetBtn.style = sizeBtnStyle(false, s);
+        this._styleIfAlive(this._pickBtn, sizeBtnStyle(false, s));
+        this._styleIfAlive(this._manageBtn, sizeBtnStyle(false, s));
+        this._updateBackgroundButtons();
+    }
+
+    // A button kept in a member can be destroyed by a row rebuild; touching a
+    // disposed actor throws "has been already disposed" inside the shell, so
+    // every optional restyle goes through here.
+    _styleIfAlive(actor, css) {
+        try {
+            if (actor)
+                actor.style = css;
+        } catch (e) {
+            log(`erhai-osk: restyle skipped (${e.message ?? e})`);
+        }
     }
 
     _updateSizeButtons() {
@@ -580,6 +1656,51 @@ export default class ErhaiOSK extends Extension {
             const btn = this._sizeBtns[step.name];
             if (btn)
                 btn.style = sizeBtnStyle(step.name === this._sizeName, this._scale);
+        }
+    }
+
+    _updateThemeButtons() {
+        for (const theme of this._themes) {
+            const btn = this._themeBtns[theme.name];
+            if (btn)
+                btn.style = themeBtnStyle(
+                    theme.name === this._themeName, this._scale, theme);
+        }
+    }
+
+    _updateOpacityButtons() {
+        for (const step of OPACITY_STEPS) {
+            const btn = this._opacityBtns[step.value];
+            if (btn)
+                btn.style = sizeBtnStyle(
+                    Math.abs(step.value - this._opacity) < 0.001, this._scale);
+        }
+    }
+
+    // ---- corner radius (直角 / 小 / 中 / 大) ---------------------------
+    // Same in-place restyle as everything else: the number flows through the
+    // style helpers, which derive the panel, grip, button and sheet radii from
+    // it so the proportions of the shipped look survive every step.
+    _setRadius(value) {
+        const clamped = Math.min(RADIUS_MAX,
+            Math.max(RADIUS_MIN, Math.round(value)));
+        if (Math.abs(clamped - this._radius) < 0.001)
+            return;
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._radius = clamped;
+        RADIUS = clamped;
+        this._applyScale();
+        this._saveConfig();
+        log(`erhai-osk: radius -> ${clamped}`);
+        this._reflow(oldHeight);
+    }
+
+    _updateRadiusButtons() {
+        for (const step of RADIUS_STEPS) {
+            const btn = this._radiusBtns[step.value];
+            if (btn)
+                btn.style = sizeBtnStyle(
+                    Math.abs(step.value - this._radius) < 0.001, this._scale);
         }
     }
 
@@ -843,6 +1964,9 @@ export default class ErhaiOSK extends Extension {
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         const show = !this._rowsBox.visible;
         this._rowsBox.visible = show;
+        // Collapsing to the thin bar must not leave the settings sheet behind.
+        if (!show)
+            this._closeSettings(false);
         if (this._collapseBtn) {
             const label = this._collapseBtn.get_child();
             if (label)
@@ -853,8 +1977,10 @@ export default class ErhaiOSK extends Extension {
 
     _setVisible(visible, writeState = true) {
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
-        if (!visible)
+        if (!visible) {
             this._repeatCancel();
+            this._closeSettings(false);
+        }
         this._hidden = !visible;
         if (this._box)
             this._box.visible = visible;
@@ -865,8 +1991,17 @@ export default class ErhaiOSK extends Extension {
             if (label)
                 label.text = visible ? 'v' : '^';
         }
-        if (this._qsToggle && this._qsToggle.checked !== visible)
-            this._qsToggle.checked = visible;
+        if (this._qsToggle && this._qsToggle.checked !== visible) {
+            // Mark the write as ours so the toggle's handler does not treat it
+            // as a user request (which would write the state file behind our
+            // back -- see the OskToggle handler).
+            this._syncingToggle = true;
+            try {
+                this._qsToggle.checked = visible;
+            } finally {
+                this._syncingToggle = false;
+            }
+        }
         if (writeState && this._readState() !== visible)
             this._writeState(visible);
         this._reflow(oldHeight);
@@ -1095,14 +2230,15 @@ export default class ErhaiOSK extends Extension {
             this._saveConfig();
     }
 
-    // ---- config persistence (position + size) ------------------------
+    // ---- config persistence (position + size + theme) ----------------
     _posPath() {
         return GLib.build_filenamev([GLib.get_user_config_dir(), POS_FILE]);
     }
 
-    // Returns {x, y, size, scale_small, scale_large}.  Anything the file does
-    // not carry is null: `size` falls back to DEFAULT_SIZE, the two scale
-    // factors fall back to SIZE_STEPS.
+    // Returns {x, y, size, theme, scale_small, scale_medium, scale_large}.
+    // Anything the file does not carry is null: `size` falls back to
+    // DEFAULT_SIZE, `theme` to DEFAULT_THEME, the three scale factors to
+    // SIZE_STEPS.
     _loadConfig() {
         try {
             const path = this._posPath();
@@ -1131,11 +2267,27 @@ export default class ErhaiOSK extends Extension {
                 const value = parseFloat(raw);
                 return Number.isFinite(value) ? value : null;
             };
+            // [custom] holds the user's own five colours; missing keys stay null
+            // and makeCustomTheme() rejects an incomplete palette.
+            const custom = ['panel', 'key', 'mod', 'act', 'on'].reduce((acc, k) => {
+                try {
+                    acc[k] = kf.get_string('custom', k);
+                } catch (e) {
+                    acc[k] = null;
+                }
+                return acc;
+            }, {});
 
             return {
                 x: kf.get_integer('position', 'x'),
                 y: kf.get_integer('position', 'y'),
                 size: str('size'),
+                theme: str('theme'),
+                opacity: num('opacity'),
+                radius: num('radius'),
+                background: str('background'),
+                backgroundEnabled: num('background_enabled'),
+                custom,
                 scale_small: num('scale_small'),
                 scale_medium: num('scale_medium'),
                 scale_large: num('scale_large'),
@@ -1159,6 +2311,26 @@ export default class ErhaiOSK extends Extension {
             kf.set_integer('position', 'x', Math.round(this._posX));
             kf.set_integer('position', 'y', Math.round(this._posY));
             kf.set_string('layout', 'size', this._sizeName || DEFAULT_SIZE);
+            kf.set_string('layout', 'theme', this._themeName || DEFAULT_THEME);
+            kf.set_string('layout', 'opacity', String(this._opacity ?? DEFAULT_OPACITY));
+            kf.set_string('layout', 'radius', String(this._radius ?? DEFAULT_RADIUS));
+            if (this._background) {
+                kf.set_string('layout', 'background', this._background);
+                kf.set_string('layout', 'background_enabled',
+                    this._backgroundOn ? '1' : '0');
+            }
+            // No remove_key() here: kf is brand new, so simply not writing the
+            // key already drops it.  Calling remove_key() on a fresh KeyFile
+            // throws "no such key", which aborted the whole save and silently
+            // lost position/size/theme/opacity every time there was no
+            // background.
+            // The user's palette is their own data: carry it over verbatim.
+            if (prev && prev.custom) {
+                for (const key of ['panel', 'key', 'mod', 'act', 'on']) {
+                    if (prev.custom[key])
+                        kf.set_string('custom', key, prev.custom[key]);
+                }
+            }
             for (const key of ['scale_small', 'scale_medium', 'scale_large']) {
                 const value = prev ? prev[key] : null;
                 if (typeof value === 'number')
@@ -1169,6 +2341,10 @@ export default class ErhaiOSK extends Extension {
                 x: Math.round(this._posX),
                 y: Math.round(this._posY),
                 size: this._sizeName || DEFAULT_SIZE,
+                theme: this._themeName || DEFAULT_THEME,
+                opacity: this._opacity ?? DEFAULT_OPACITY,
+                background: this._background ?? null,
+                custom: prev ? prev.custom : null,
                 scale_small: prev ? prev.scale_small : null,
                 scale_medium: prev ? prev.scale_medium : null,
                 scale_large: prev ? prev.scale_large : null,

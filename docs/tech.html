@@ -240,7 +240,7 @@ Left 0xff51  Up 0xff52  Right 0xff53  Down 0xff54</code></pre>
         <div class="reveal">
           <div class="code" style="margin-top:0">
             <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
-            <pre><code><span class="c"># ~/.config/erhai-osk/position.kf  —  改完点一下尺寸按钮即可生效</span>
+            <pre><code><span class="c"># ~/.config/pad-osk/position.kf  —  改完点一下尺寸按钮即可生效</span>
 [layout]
 size=medium
 scale_small=0.72
@@ -307,7 +307,7 @@ scale_large=0.99</code></pre>
         <details class="pit">
           <summary data-en="Two entry points drifted into two states">两个控制入口各管一套状态</summary>
           <div class="body">
-            <p data-en="The Quick Settings toggle hid the panel; the app icon enabled or disabled the extension. Result: I have to press it twice. Both now share ~/.config/erhai-osk/visible as the single source of truth, watched with Gio.FileMonitor and written back only when the value actually differs.">系统菜单开关只隐藏面板，应用图标改的是扩展启停，于是「要点两下才生效」。现在两者共用一个状态文件 <code>~/.config/erhai-osk/visible</code>，用 <code>Gio.FileMonitor</code> 监听，写回前先比对当前值，不会形成回环。</p>
+            <p data-en="The Quick Settings toggle hid the panel; the app icon enabled or disabled the extension. Result: I have to press it twice. Both now share ~/.config/pad-osk/visible as the single source of truth, watched with Gio.FileMonitor and written back only when the value actually differs.">系统菜单开关只隐藏面板，应用图标改的是扩展启停，于是「要点两下才生效」。现在两者共用一个状态文件 <code>~/.config/pad-osk/visible</code>，用 <code>Gio.FileMonitor</code> 监听，写回前先比对当前值，不会形成回环。</p>
             <p data-en="The lesson generalises: when one feature has two entry points, they must land on one state, not on two look-alike actions.">这条值得记住：<strong>当一个功能有两个控制入口时，它们必须落在同一个状态上，而不是各自实现「看起来差不多」的动作。</strong></p>
           </div>
         </details>
@@ -374,7 +374,7 @@ scale_large=0.99</code></pre>
             <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
             <pre><code><span class="c"># 构建（需要 dpkg-deb）</span>
 sh packaging/build-deb.sh
-<span class="c"># → dist/pad-osk_0.Beta_arm64.deb</span></code></pre>
+<span class="c"># → dist/pad-osk_1.0_arm64.deb</span></code></pre>
           </div>
         </div>
       </div>

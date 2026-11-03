@@ -1,12 +1,12 @@
 Package: pad-osk
-Version: 0.Beta
+Version: 1.0
 Architecture: arm64
 Maintainer: erhai <user@opd2413.local>
 Section: utils
 Priority: optional
 Depends: gnome-shell (>= 45), gnome-shell (<< 60), libglib2.0-bin
 Recommends: ibus, ibus-libpinyin
-Description: On-screen keyboard with three sizes, for the OnePlus Pad 2 Pro
+Description: On-screen keyboard with palettes, sizes and transparency
  A GNOME Shell extension that draws a PC-style on-screen keyboard and injects
  keys through Clutter.VirtualInputDevice, inside the compositor.
  .
@@ -18,8 +18,14 @@ Description: On-screen keyboard with three sizes, for the OnePlus Pad 2 Pro
  .
  Layout is PC-style with a number row, sticky modifiers, arrow keys and a
  Chinese/English input-method toggle. Every character key, the erase key and
- the arrows repeat while held. Three key sizes (small / medium / large,
- 55% / 66% / 76% of the screen width) are picked from the grip bar and can be
- fine-tuned from ~/.config/erhai-osk/position.kf. The panel can be dragged,
- collapsed to a thin bar, closed, and hidden from Quick Settings or the
- application grid. It steps aside when the shutdown/session dialog appears.
+ the arrows repeat while held. A settings sheet behind the grip bar's gear
+ button picks the key size (small / medium / large, 55% / 66% / 76% of the
+ screen width), the palette (graphite / light / warm / high contrast, plus a
+ user-defined palette read from the [custom] group), how see-through the whole
+ keyboard is (100% down to 50% -- panel, keys and glyphs fade together) and an
+ optional background image from ~/.config/pad-osk/backgrounds/. A reset
+ button returns everything to the defaults. Settings are remembered per user
+ and can be fine-tuned from ~/.config/pad-osk/position.kf. The panel can be
+ dragged, collapsed to a thin bar, closed, and hidden from Quick Settings or
+ the application grid. It steps aside when the shutdown/session dialog
+ appears.
