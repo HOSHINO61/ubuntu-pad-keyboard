@@ -280,13 +280,13 @@ background=/home/user/图片/星空.webp
 
 ![Quick Settings 里的屏幕键盘开关（中档）](docs/images/keyboard-quick-settings.png)
 
-三档尺寸（`⚙` 设置面板里选，当前档填充高亮；下面的截图是改版前拖到条上的样子）：
+三档尺寸（`⚙` 设置面板里选，当前档填充高亮）：
 
 | 小（55%） | 中（66%） | 大（76%） |
 |---|---|---|
-| ![小](docs/images/keyboard-sizes-small.png) | ![中](docs/images/keyboard-sizes.png) | ![大](docs/images/keyboard-sizes-large.png) |
+| ![小](docs/images/keyboard-v1.0-size-small.png) | ![中](docs/images/keyboard-v1.0-size-medium.png) | ![大](docs/images/keyboard-v1.0-size-large.png) |
 
-另外两档的全屏截图：[小档](docs/images/keyboard-quick-settings-small.png) · [大档](docs/images/keyboard-quick-settings-large.png)
+三张都是同一套外观（深灰、100% 透明、圆角小、无背景），差别只在尺寸。
 
 ## 安装
 

@@ -268,12 +268,87 @@ scale_large=0.99</code></pre>
     </div>
   </section>
 
+  <!-- ============ SETTINGS SHEET ============ -->
+  <section class="section" id="settings">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-en="Settings sheet">设置面板</p>
+        <h2 data-en="A sheet inside the keyboard, not a popup">不用 PopupMenu，做一层内联面板</h2>
+        <p class="lead" data-en-html="1.0 的外观设置没有做成 <code>St.PopupMenu</code>，而是键盘内部的一层内联 sheet：它属于同一个 actor 树，跟着键盘一起缩放、一起透明，也不会去抢输入抓取。">
+          1.0 的外观设置没有做成 <code>St.PopupMenu</code>，而是键盘内部的一层内联 sheet：它属于同一个 actor 树，跟着键盘一起缩放、一起透明，也不会去抢输入抓取。
+        </p>
+      </div>
+
+      <div class="grid grid-2" style="align-items:start;gap:18px">
+        <div class="reveal prose">
+          <h3 style="margin-top:0" data-en="Why not PopupMenu">为什么不用 PopupMenu</h3>
+          <p style="color:var(--text-2);font-size:14.2px" data-en="A PopupMenu opens its own grab, closes on any click outside, and anchors to the shell's menu layer — on a chrome actor that is already offset and scaled, it ends up in the wrong place. It also fights the keyboard's own modal handling.">
+            <code>St.PopupMenu</code> 会自己开一个 grab，点外面任何地方就关；而且它挂在 shell 的菜单层，对一个已经带缩放和偏移的 chrome actor 来说，弹出来的位置是错的。它还会和键盘自己的模态处理打架。
+          </p>
+          <p style="color:var(--text-2);font-size:14.2px" data-en="The sheet is an actor inside the keyboard container instead: show and hide is a flag, positioning is the same coordinate space as the keys, and it inherits the panel's opacity for free.">
+            改成键盘容器里的一个 actor 之后：显示/隐藏只是一个标志位，定位和按键用同一套坐标，透明度也自然继承面板那一份。
+          </p>
+
+          <h3 data-en="Palettes are tokens">配色是一张 token 表</h3>
+          <p style="color:var(--text-2);font-size:14.2px" data-en="Each palette is five colours — panel, key, modifier, active, accent. Switching rewrites the remembered keys' style in place, the same way size changes work, so nothing is rebuilt under a live touch. [custom] in position.kf adds a sixth swatch when all five values parse.">
+            每套配色就是五个颜色：底板、键面、修饰键、按下态、强调色。切换时按记住的按键表就地改写 <code>style</code>——和换尺寸同一套路，手指按着的时候不重建控件。<code>position.kf</code> 里的 <code>[custom]</code> 五个值都合法时，颜色行会多出第六个色块。
+          </p>
+        </div>
+
+        <div class="reveal">
+          <div class="code" style="margin-top:0">
+            <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+            <pre><code><span class="c"># ~/.config/pad-osk/position.kf</span>
+[layout]
+size=medium
+theme=light
+opacity=0.60
+radius=large
+background=/home/user/图片/星空.webp
+
+[custom]
+panel=#1b2026
+key=#333a42
+mod=#3f4750
+act=#3a4a4f
+on=#7cc4ff</code></pre>
+          </div>
+          <p class="kbd-note" data-en="theme accepts graphite / light / warm / contrast / custom. An unknown name falls back to graphite; opacity outside 0.50–1.00 is clamped.">
+            <code>theme</code> 接受 <code>graphite</code> / <code>light</code> / <code>warm</code> / <code>contrast</code> / <code>custom</code>，名字写错回落到深灰；<code>opacity</code> 超出 0.50–1.00 会被夹回边界。
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:20px;align-items:start;gap:18px">
+        <div class="card reveal" style="padding:22px">
+          <h3 data-en="Transparency is one opacity">透明度只设一个数</h3>
+          <p style="margin-top:10px;font-size:13.8px;color:var(--text-2)" data-en="The whole keyboard actor gets opacity 0–255; mutter multiplies the parent's alpha into every child. So panel, keys, glyphs, grip bar and the settings sheet all fade together — and no theme or size change has to recompute a stack of translucent layers.">
+            给整个键盘 actor 设 <code>opacity</code>（0–255），mutter 会把父节点的 alpha 乘进每个子节点。于是底板、键面、文字、拖动条和设置面板一起淡，换主题、换尺寸都不用重算一堆半透明叠加。
+          </p>
+          <p style="margin-top:10px;font-size:13.8px;color:var(--text-2)" data-en="The floor is 50 %: below that the glyphs stop being readable on a bright wallpaper. The value is clamped on load and on save.">
+            下限 50 %：再低，浅色壁纸上字就看不清了。读盘和保存时都会夹一次范围。
+          </p>
+        </div>
+
+        <div class="card reveal" style="padding:22px">
+          <h3 data-en="Backdrop via the file chooser">背景图走系统文件选择器</h3>
+          <p style="margin-top:10px;font-size:13.8px;color:var(--text-2)" data-en="A shell chrome actor has no GTK dialog, so 选图… goes through the XDG desktop portal; zenity is the fallback, and without either only the backgrounds/ list remains. Images are drawn with background-size: cover, and a missing file logs “background missing” and falls back to none.">
+            键盘是 shell 图层，进程里没有可用的 GTK 对话框，所以「选图…」走 XDG desktop portal，退路是 <code>zenity --file-selection</code>，两样都没有就只留 <code>backgrounds/</code> 的文件列表。铺法是 <code>background-size: cover</code> 等比裁切；图片被删时日志留一行 <code>background missing</code>，自动回退成无背景。
+          </p>
+          <p style="margin-top:10px;font-size:13.8px;color:var(--text-2)" data-en="Deleting a backdrop takes two taps: the first tap turns ✕ into 确认删 / 取消, and it cancels itself after five seconds. On a tablet one stray tap should not delete a file.">
+            删图要点两下：第一次点 <code>✕</code> 只是把它变成「确认删 / 取消」，5 秒不点自动取消——平板上一次误触不该等于删文件。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ PITFALLS ============ -->
   <section class="section" id="pitfalls">
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow" data-en="Pitfalls">踩坑</p>
-        <h2 data-en="Six that cost the most time">六个最费时间的坑</h2>
+        <h2 data-en="Eight that cost the most time">八个最费时间的坑</h2>
         <p class="lead" data-en="All of them are fixed in the shipped build. They are kept here because each one has a symptom that points at the wrong cause.">
           都已经修好。留在这里，是因为每一条的症状都会把人指向错误的原因。
         </p>
@@ -325,6 +400,27 @@ scale_large=0.99</code></pre>
             <p data-en="org.gnome.Shell.Eval is disabled (the unsafe-mode key no longer exists), ReloadExtension returns Method is not implemented, and disable + enable reuses the cached ES module. Changing a line means logging out again — which is why the three scale factors were made tunable from a file."><code>org.gnome.Shell.Eval</code> 被禁用（<code>unsafe-mode</code> 这个键已不存在），<code>ReloadExtension</code> 返回 <code>Method is not implemented</code>，<code>disable</code> + <code>enable</code> 复用缓存的 ES 模块。改一行就要注销一次——这也是为什么三档缩放做成了可调文件。</p>
           </div>
         </details>
+
+        <details class="pit">
+          <summary data-en="remove_key() on a fresh KeyFile aborts the whole save">对一个新建的 KeyFile 调 remove_key()，整次保存就废了</summary>
+          <div class="body">
+            <p data-en="1.0 之前的保存流程会把整份配置在一个新建的 KeyFile 上重写一遍：先 remove_key() 清掉旧值再写回。在新建、还没读过盘的对象上调用 remove_key() 会抛异常，于是 save_config 直接中断——位置、尺寸、配色、透明度全都没落盘，日志里只有一行 save config failed，界面看起来却一切正常。改成先 load 再按需写回，落盘前统一校验一次。">
+              1.0 之前的保存流程是：在新建的 <code>KeyFile</code> 上 <code>remove_key()</code> 清旧值、再写回所有键。在没读过盘的对象上调 <code>remove_key()</code> 会抛异常，<code>save_config</code> 当场中断——位置、尺寸、配色、透明度全都没落盘，日志里只有一行 <code>save config failed</code>，而界面看起来完全正常，所以这个坑很晚才被发现。
+            </p>
+            <p data-en="The lesson: a settings writer that can fail silently is worse than one that crashes. Every save now ends with a read-back check.">
+              教训是：一个会静默失败的设置写入器，比一个会崩的还难查。现在每次保存末尾都做一次读回校验。
+            </p>
+          </div>
+        </details>
+
+        <details class="pit">
+          <summary data-en="The keyboard covers the file chooser it just opened">选图时，键盘压在自己打开的对话框上</summary>
+          <div class="body">
+            <p data-en="点「选图…」弹出 XDG portal 的文件选择器，但键盘是 chrome 图层，永远画在普通窗口之上，于是整个选择器被键盘挡住——看起来像没反应。现在选图期间主动隐藏键盘，选择器关闭后再恢复，和关机对话框让路是同一套 watch。">
+              点「选图…」会弹出 XDG portal 的文件选择器，可键盘画在 chrome 图层，永远压在普通窗口之上，结果选择器被键盘挡得只剩一条边。现在选图期间主动隐藏键盘，选择器关闭后恢复——和关机对话框让路用的是同一套监听。
+            </p>
+          </div>
+        </details>
       </div>
     </div>
   </section>
@@ -360,6 +456,8 @@ scale_large=0.99</code></pre>
             <li data-en="The three steps are absolute pixels calibrated on 1696 px; a tablet with a different logical width drifts (todo: adapt to the screen width).">三档是绝对像素，按 1696 px 标定；不同逻辑分辨率的平板比例会漂（待办：改为按屏宽比例自适应）。</li>
             <li data-en="No smart avoidance around the caret — the keyboard stays where you put it.">没有随候选框位置自动避让，键盘停在你放的位置。</li>
             <li data-en="The GDM greeter has no on-screen keyboard: the greeter is a separate user and cannot see a user extension.">GDM 登录界面没有屏幕键盘：greeter 是独立用户，看不到用户扩展。</li>
+            <li data-en="The keyboard UI is Chinese only for now; an English UI is planned for 1.0.1.">键盘界面目前只有中文，英文界面计划在 1.0.1。</li>
+            <li data-en="The deb uses zstd compression, so dpkg must be 1.21.18 or newer (Ubuntu 24.04+).">deb 用 zstd 压缩，需要 <code>dpkg ≥ 1.21.18</code>（Ubuntu 24.04 起自带）。</li>
           </ul>
         </div>
 
@@ -422,7 +520,7 @@ sh packaging/build-deb.sh
       </div>
     </div>
     <div class="footer-bottom">
-      <span>Copyright © 2026 · <a href="https://mybailu.cn/" target="_blank" rel="noopener noreferrer" title="访问作者网站">小鸟游星野</a></span>
+      <span>Copyright © 2026 · <a href="https://mybailu.cn/" target="_blank" rel="noopener noreferrer" title="访问作者网站">小鸟游星野</a> · <a href="https://www.coolapk.com/u/41024424" target="_blank" rel="noopener noreferrer" title="访问作者酷安" data-en="Coolapk">酷安</a></span>
       <span data-en="Mutter 18 · Clutter 18 · GJS — built on the shell's own APIs">Mutter 18 · Clutter 18 · GJS — 只用 shell 自己的 API</span>
     </div>
     <div class="footer-legal">

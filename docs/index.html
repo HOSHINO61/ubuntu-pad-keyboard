@@ -44,6 +44,12 @@
     <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
     <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3h7v7"/><path d="M10 14 21 3"/><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.3 0 1.9-.8 1.9-1.9 0-1.4 1-2.3 2.5-2.3H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3z"/><circle cx="8.2" cy="10.2" r="1"/><circle cx="12" cy="8" r="1"/><circle cx="15.6" cy="11" r="1"/></symbol>
+    <symbol id="i-opacity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M21 16.5 16 11l-6 6-3-3-4 4"/></symbol>
+    <symbol id="i-corner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9a5 5 0 0 1 5-5h11"/><path d="M9 4h5"/><path d="M4 14v3"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.7-6.2"/><path d="M3 4v5h5"/></symbol>
   </defs>
 </svg>
 
@@ -58,6 +64,7 @@
       <a href="#why" data-en="Why">为什么</a>
       <a href="#how" data-en="How it works">工作原理</a>
       <a href="#sizes" data-en="Sizes">三档尺寸</a>
+      <a href="#theme" data-en="Appearance">外观</a>
       <a href="#features" data-en="Features">功能</a>
       <a href="#install" data-en="Install">安装</a>
       <a href="tech.html" data-en="Technical notes">技术方案</a>
@@ -89,7 +96,7 @@
         </p>
         <a class="hero-tip" href="#download">
           <svg aria-hidden="true" width="15" height="15"><use href="#i-check"/></svg>
-          <span data-en="v1.0 is out — grab it on Gitee or GitHub">v1.0 已发布，去 Gitee / GitHub 下载</span>
+          <span data-en="v1.0 is officially released">v1.0 已正式发布</span>
           <svg aria-hidden="true" width="13" height="13" style="opacity:.75"><use href="#i-arrow"/></svg>
         </a>
         <div class="hero-cta">
@@ -107,7 +114,7 @@
           <span class="chip"><b>arm64</b> · Wayland</span>
           <span class="chip">MIT License</span>
           <span class="chip">v1.0</span>
-          <span class="chip"><b>14.8</b> KB</span>
+          <span class="chip"><b>25.5</b> KB</span>
         </div>
       </div>
 
@@ -246,9 +253,9 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
         </div>
         <div class="stage">
           <div class="stage-img">
-            <img data-size-img="small" src="assets/img/quick-settings-small.webp" alt="小档键盘，占屏宽 55%" width="1600" height="1132" decoding="async" hidden>
-            <img data-size-img="medium" src="assets/img/quick-settings.webp" alt="中档键盘，占屏宽 66%" width="1600" height="1132" decoding="async">
-            <img data-size-img="large" src="assets/img/quick-settings-large.webp" alt="大档键盘，占屏宽 76%" width="1600" height="1132" decoding="async" hidden>
+            <img data-size-img="small" src="assets/img/sizes-small.webp" alt="小档键盘，占屏宽 55%" width="1600" height="1132" decoding="async" hidden>
+            <img data-size-img="medium" src="assets/img/sizes-medium.webp" alt="中档键盘，占屏宽 66%" width="1600" height="1132" decoding="async">
+            <img data-size-img="large" src="assets/img/sizes-large.webp" alt="大档键盘，占屏宽 76%" width="1600" height="1132" decoding="async" hidden>
           </div>
         </div>
         <dl class="size-stats" style="margin:0">
@@ -260,6 +267,75 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
       </div>
       <p class="kbd-note" data-en="Measured on a 1696 px logical screen width. Scale factors live in ~/.config/pad-osk/position.kf under [layout] and range from 0.40 to 2.00 — tune them without repackaging.">
         数值按 1696 px 逻辑屏宽实测标定。三档缩放写在 <code>~/.config/pad-osk/position.kf</code> 的 <code>[layout]</code> 组里，范围 0.40–2.00，改完点一下尺寸按钮就生效，不用重新打包。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ THEME ============ -->
+  <section class="section" id="theme">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-en="Appearance">外观</p>
+        <h2 data-en="One gear sheet: colour, transparency, radius, backdrop">一个 ⚙ 面板，管住配色、透明度、圆角和背景</h2>
+        <p class="lead" data-en="Tap the gear on the grip bar. Three sizes, four palettes, 100 % to 50 % transparency, four corner radii and a backdrop image all live in that one sheet, with a reset row at the bottom. Settings are remembered per user and survive a reboot.">
+          拖动条上的 <strong>⚙</strong> 打开设置面板：三档尺寸、四套配色、100 %–50 % 透明度、四档圆角、背景图，最后一行是「恢复默认」。所有设置按用户保存，重启后还在。
+        </p>
+      </div>
+
+      <figure class="shot-frame reveal" style="margin:0">
+        <img src="assets/img/v1.0-settings.webp"
+             alt="1.0 设置面板：大小、颜色、透明、圆角、背景、默认六行设置叠在键盘上方"
+             width="1920" height="1358" loading="lazy" decoding="async">
+        <figcaption class="shot-cap">
+          <span class="led"><i></i><span data-en="Light palette · 60 % · large radius">浅色配色 · 60 % 透明 · 大圆角</span></span>
+          <span data-en="Ubuntu 26.04 · GNOME 50.1">Ubuntu 26.04 · GNOME 50.1</span>
+        </figcaption>
+      </figure>
+
+      <div class="grid grid-2" style="margin-top:18px;align-items:start;gap:18px">
+        <div class="card reveal" style="padding:22px">
+          <h3 style="margin-bottom:12px" data-en="Palettes swap tokens">换配色不重建按键</h3>
+          <p style="font-size:13.8px;color:var(--text-2)" data-en="Graphite is the default; light, warm and high-contrast cover daylight, long sessions and low vision. Switching rewrites each key's style in place, so a finger resting on the glass never lands on another key.">
+            深灰是默认；浅色应付白天强光，暖色长时间看不累，高对比是纯黑底配白 / 黄 / 青键面。换色和换尺寸一样就地改样式，不重建控件——改色时手指还按在键上也不会出岔子。
+          </p>
+          <div class="code" style="margin-top:14px">
+            <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+            <pre><code><span class="c"># ~/.config/pad-osk/position.kf</span>
+[custom]
+panel=#1b2026
+key=#333a42
+mod=#3f4750
+act=#3a4a4f
+on=#7cc4ff</code></pre>
+          </div>
+          <p class="kbd-note" data-en="Five colours are enough: text contrast is derived from their brightness, and the grip bar, buttons and selection follow the same formula. Missing or malformed values simply hide the custom swatch.">
+            只填这五个就够了：文字按亮度自动取黑或白，拖动条、按钮、选中高亮都从这五色推导。少于五个或写错十六进制，自定义色块直接不出现。
+          </p>
+        </div>
+
+        <div class="card reveal" style="padding:22px">
+          <h3 style="margin-bottom:12px" data-en="Faded as one piece">整块一起淡</h3>
+          <p style="font-size:13.8px;color:var(--text-2)" data-en="Transparency is a single opacity on the keyboard actor, not per-key alpha. mutter applies the parent's alpha to every child, so themes and sizes never recompute the composition — and the sheet fades with it.">
+            透明度没有逐键去改颜色，而是给整个键盘 actor 设 <code>opacity</code>（0–255）。mutter 把父节点的 alpha 一起作用到所有子节点，所以换主题、换尺寸都不用重算透明叠加，设置面板本身也跟着淡。
+          </p>
+          <div class="table-wrap" style="margin-top:14px">
+            <table style="min-width:0">
+              <thead><tr><th data-en="Level">档位</th><th data-en="Opactiy">actor opacity</th><th data-en="Look">观感</th></tr></thead>
+              <tbody>
+                <tr><td>100 %</td><td>255</td><td data-en="Opaque, as before">完全不透</td></tr>
+                <tr><td>80 %</td><td>204</td><td data-en="Faintly see-through">能隐约看到底下窗口</td></tr>
+                <tr><td>50 %</td><td>128</td><td data-en="Floating, still legible">浮在桌面上，字还清楚</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="kbd-note" data-en="50 % is the floor: below that the glyphs blur. The value lives in [layout] opacity= and is clamped to 0.50–1.00.">
+            下限卡在 50 %，再低字就糊。数值存在 <code>[layout] opacity=</code>，范围 0.50–1.00，写超了会被夹回边界。
+          </p>
+        </div>
+      </div>
+
+      <p class="kbd-note" style="margin-top:18px" data-en="Backdrop: 选图… opens the system file chooser (XDG portal). Images in ~/.config/pad-osk/backgrounds/ are listed by name; 无 only turns the picture off, 管理… deletes the file. A missing image falls back to none and logs “background missing”.">
+        背景：<strong>选图…</strong> 调系统文件选择器（XDG portal），选中的图会<strong>复制</strong>到 <code>~/.config/pad-osk/backgrounds/</code>；这个目录里的图按文件名列出来，点一下就换上。<strong>无</strong> 只是把图关掉、路径还在；真要删图走 <strong>管理…</strong>。图片被删时下次加载自动回退成无背景，日志里留一行 <code>background missing</code>。
       </p>
     </div>
   </section>
@@ -281,7 +357,13 @@ vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);</code></pre>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-repeat"/></svg></span><div><h3 data-en="Long-press repeat">长按连发</h3><p data-en="Hold a character key, Backspace or an arrow key and it keeps firing: 620 ms to start, 125 ms per step, ramping to 60 ms. Modifiers and Shift never repeat.">按住字符键、退格或方向键不放会连续输入：620 ms 起发、125 ms 一步、逐步加速到 60 ms；修饰键和 Shift 不连发。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-shift"/></svg></span><div><h3 data-en="Shifted symbols">上档符号</h3><p data-en="Digits and punctuation fire as base key plus a real Shift press, so ! @ # $ % never come out as 1 2 3 4 5.">数字行和符号键的上档字符走"基键 + 真按 Shift"，不是直接发那个字符，所以 ! @ # $ % 一个不少。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-globe"/></svg></span><div><h3 data-en="Chinese / English">中 / 英切换</h3><p data-en="The 中/英 key sends Super+Space through GNOME's input-source switch; candidates work as usual in ibus-libpinyin.">右下角 中/英 键直发 Super+Space，走 GNOME 输入源切换；ibus-libpinyin 的候选词照常操作。</p></div></article>
-        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-expand"/></svg></span><div><h3 data-en="Three sizes">三档尺寸</h3><p data-en="Small / medium / large at 55 %, 66 % and 76 % of the screen width, switched from the grip bar and remembered across logins.">小 / 中 / 大三档占屏宽 55 % / 66 % / 76 %，拖动条右侧一点即换，跨登录记忆。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-expand"/></svg></span><div><h3 data-en="Three sizes">三档尺寸</h3><p data-en="Small / medium / large at 55 %, 66 % and 76 % of the screen width, switched from the gear sheet and remembered across logins.">小 / 中 / 大三档占屏宽 55 % / 66 % / 76 %，在 ⚙ 面板里选，跨登录记忆。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-gear"/></svg></span><div><h3 data-en="Settings sheet">⚙ 设置面板</h3><p data-en="Size, palette, transparency, corner radius and backdrop all live behind the gear on the grip bar — no config file needed.">尺寸、配色、透明度、圆角、背景都在拖动条的 <strong>⚙</strong> 里，改完立刻生效，不用碰配置文件。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-palette"/></svg></span><div><h3 data-en="Four palettes">四套配色</h3><p data-en="Graphite, light, warm and high-contrast. Switching swaps tokens instead of rebuilding keys; fill five colours in [custom] and another swatch appears.">深灰 / 浅色 / 暖色 / 高对比，换色就地改样式、不重建按键；在 <code>[custom]</code> 里填五个颜色还能多出一档自定义。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-opacity"/></svg></span><div><h3 data-en="See-through">背景透明</h3><p data-en="100 % down to 50 % in six steps. The whole keyboard fades as one piece — panel, keys, glyphs and grip bar together.">100 % 到 50 % 六档，底板、键面、文字、拖动条<strong>一起</strong>淡，像一整块玻璃，而不是透明的框配实心的键。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-corner"/></svg></span><div><h3 data-en="Corner radius">四档圆角</h3><p data-en="Square, small, medium, large — 0 / 8 / 16 / 26 px. Keys, panel and grip bar change together.">直角 / 小 / 中 / 大（0 / 8 / 16 / 26 px），键面、面板、拖动条一起变，不会只圆一半。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-image"/></svg></span><div><h3 data-en="Custom backdrop">自定义背景</h3><p data-en="Pick an image with the system file chooser, or drop png / jpg / webp into ~/.config/pad-osk/backgrounds/ and tap the name.">「选图…」调系统文件选择器，或者把 png / jpg / webp 放进 <code>~/.config/pad-osk/backgrounds/</code> 直接点名字；铺法是 cover 等比裁切。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-reset"/></svg></span><div><h3 data-en="One-tap reset">恢复默认</h3><p data-en="Back to medium size, graphite, 100 %, no backdrop, centred at the bottom. Your [custom] colours and backdrop file names survive.">一键回中档 + 深灰 + 100 % + 无背景 + 屏幕底部居中；<code>[custom]</code> 配色和背景文件名不会跟着丢。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-move"/></svg></span><div><h3 data-en="Drag and collapse">可拖动 · 可收起</h3><p data-en="Hold the grip bar to move it, ⌄ collapses it to a thin strip, ✕ closes it. The position survives a reboot.">按住拖动条定位，⌄ 收起成细条，✕ 关闭；位置与档位重启后还在。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-toggle"/></svg></span><div><h3 data-en="Two entry points, one state">两个入口，一个状态</h3><p data-en="The Quick Settings switch and the Pad-OSK app icon share one state file, so the two never disagree.">Quick Settings 的「屏幕键盘」开关与应用抽屉里的 Pad-OSK 图标共用同一个状态文件，不会各说各话。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-focus"/></svg></span><div><h3 data-en="Never steals focus">不抢焦点</h3><p data-en="The UI is a shell layer, so tapping a key does not move the caret out of the field you were typing in.">UI 是 shell 图层而不是窗口，点键盘不会把光标从输入框里赶走。</p></div></article>
@@ -353,7 +435,7 @@ sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
             <ul class="list">
               <li><svg aria-hidden="true"><use href="#i-check"/></svg><span data-en="Quick Settings (top right) → “Screen Keyboard” switch">右上角系统菜单 → <strong>屏幕键盘</strong> 开关</span></li>
               <li><svg aria-hidden="true"><use href="#i-check"/></svg><span data-en="Application grid → Pad-OSK icon">应用抽屉 → <strong>Pad-OSK</strong> 图标</span></li>
-              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span data-en="Grip bar: drag to move, ⌄ to collapse, 小/中/大 to resize">拖动条：<strong>⠿ 拖动</strong> 定位、<strong>⌄</strong> 收起、<strong>小/中/大</strong> 换档</span></li>
+              <li><svg aria-hidden="true"><use href="#i-check"/></svg><span data-en="Grip bar: drag to move, ⚙ for settings, ⌄ to collapse">拖动条：<strong>⠿ 拖动</strong> 定位、<strong>⚙</strong> 设置、<strong>⌄</strong> 收起</span></li>
             </ul>
           </div>
 
@@ -402,6 +484,7 @@ sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en-html="metadata.json declares shell-version 50 only — GNOME 45–49 will not load it. <strong>There is only an arm64 package; amd64 is not built yet.</strong>"><code>metadata.json</code> 只声明 <code>shell-version: [&quot;50&quot;]</code>，GNOME 45–49 不会加载；<strong>只有 arm64 包，amd64 尚未构建</strong>。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The three sizes are absolute pixels calibrated for 1696 px, so a different logical resolution drifts the ratio (adaptive scaling is on the todo list).">三档是<strong>绝对像素</strong>，按 1696 px 逻辑屏宽标定；换不同逻辑分辨率的平板比例会漂（自适应缩放待办中）。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Chinese input needs ibus + ibus-libpinyin (already in Recommends).">打中文需要 <code>ibus</code> + <code>ibus-libpinyin</code>（已在 <code>Recommends</code> 里声明）。</span></li>
+            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The keyboard UI is Chinese only for now; an English UI is planned for 1.0.1.">键盘界面目前只有中文，英文界面计划在 1.0.1（这个网站是双语的，扩展本身还不是）。</span></li>
           </ul>
           <a class="link-more" href="tech.html#limits">
             <span data-en="Compatibility details">兼容性细节</span>
@@ -452,6 +535,20 @@ sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
         </div>
       </div>
 
+      <div class="panel" style="margin-top:18px;padding:20px 22px">
+        <h3 style="margin-bottom:12px" data-en="Checksum and upgrade path">校验与升级</h3>
+        <div class="code" style="margin:0">
+          <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+          <pre><code>文件    pad-osk_1.0_arm64.deb（26,104 字节）
+sha256  26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
+
+sha256sum pad-osk_1.0_arm64.deb</code></pre>
+        </div>
+        <p class="kbd-note" data-en="Upgrading from 0.Beta / 0.Beta2 is a normal upgrade; going back needs --allow-downgrades. The package uses zstd compression, so dpkg must be 1.21.18 or newer.">
+          从 <code>0.Beta</code> / <code>0.Beta2</code> 升级属于正常升级；要退回旧版得加 <code>--allow-downgrades</code>。包用 zstd 压缩，要求 <code>dpkg ≥ 1.21.18</code>（Ubuntu 24.04 起自带）。
+        </p>
+      </div>
+
       <div class="callout" style="margin-top:18px">
         <span class="ico"><svg aria-hidden="true"><use href="#i-warn"/></svg></span>
         <span data-en="Built for arm64 Ubuntu on GNOME 50 Wayland. Installing Ubuntu on the tablet itself is a separate, per-device upstream project — this repository only covers the touch-input half.">
@@ -495,7 +592,7 @@ sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>Copyright © 2026 · <a href="https://mybailu.cn/" target="_blank" rel="noopener noreferrer" title="访问作者网站">小鸟游星野</a></span>
+      <span>Copyright © 2026 · <a href="https://mybailu.cn/" target="_blank" rel="noopener noreferrer" title="访问作者网站">小鸟游星野</a> · <a href="https://www.coolapk.com/u/41024424" target="_blank" rel="noopener noreferrer" title="访问作者酷安" data-en="Coolapk">酷安</a></span>
       <span data-en="Mutter 18 · Clutter 18 · GJS — built on the shell's own APIs">Mutter 18 · Clutter 18 · GJS — 只用 shell 自己的 API</span>
     </div>
     <div class="footer-legal">
