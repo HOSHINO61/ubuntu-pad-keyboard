@@ -84,7 +84,9 @@ fi
 
 if [ "$1" = "--push" ]; then
     git push "$REMOTE" "gh:$BRANCH" --force
-    git push "$REMOTE" "$first:refs/tags/v1.0" --force
+    # The tag has to point at the replayed *head*: tagging "$first" would put
+    # the release on the repository's very first commit.
+    git push "$REMOTE" "$prev:refs/tags/${TAG:-v1.0}" --force
     echo "pushed to $REMOTE"
 else
     echo
