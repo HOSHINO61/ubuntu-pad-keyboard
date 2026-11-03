@@ -272,6 +272,10 @@ background=/home/user/图片/星空.webp
 
 ## 截图
 
+1.0 的设置面板——浅色配色、60% 透明、大圆角，五行设置全在里面：
+
+![PAD-OSK 1.0 设置面板](docs/images/keyboard-v1.0-settings.png)
+
 「中」档（默认）——Quick Settings 里能看到「屏幕键盘」开关，WiFi 名称已打码：
 
 ![Quick Settings 里的屏幕键盘开关（中档）](docs/images/keyboard-quick-settings.png)
