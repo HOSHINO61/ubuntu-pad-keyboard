@@ -35,6 +35,25 @@ cp "$ROOT/scripts/pad-osk-toggle.sh" \
 cp "$ROOT/scripts/pad-osk.desktop" \
    "$STAGE/usr/share/applications/pad-osk.desktop"
 
+# Translations: compile po/<lang>.po into
+# usr/share/gnome-shell/extensions/<uuid>/locale/<lang>/LC_MESSAGES/<uuid>.mo,
+# which is where the extension's bindtextdomain() looks.  Needs msgfmt (gettext).
+EXT_LOCALE="$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/locale"
+if [ -d "$ROOT/po" ]; then
+    command -v msgfmt >/dev/null 2>&1 || {
+        echo "error: msgfmt not found (install gettext)" >&2
+        exit 1
+    }
+    mkdir -p "$EXT_LOCALE"
+    for po in "$ROOT"/po/*.po; do
+        [ -e "$po" ] || continue
+        lang=$(basename "$po" .po)
+        mkdir -p "$EXT_LOCALE/$lang/LC_MESSAGES"
+        msgfmt --check -o "$EXT_LOCALE/$lang/LC_MESSAGES/erhai-osk@local.mo" "$po"
+        echo "locale: $lang"
+    done
+fi
+
 # dpkg-deb preserves the tree's modes, so set them explicitly.
 # The DEBIAN directory itself must be 0755: a tree that came in from Windows or
 # from a FAT/exFAT volume arrives as 0707, and dpkg-deb refuses to build.
@@ -44,6 +63,8 @@ chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/postrm"
 chmod 644 "$STAGE/usr/share/applications/pad-osk.desktop"
 chmod 644 "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/"*.js \
           "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/"*.json
+find "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/locale" \
+     -name '*.mo' -exec chmod 644 {} + 2>/dev/null || true
 
 echo "=== tree ==="
 find "$STAGE" -path "$STAGE/DEBIAN" -prune -o -print | sed "s|$STAGE|.|" | sort

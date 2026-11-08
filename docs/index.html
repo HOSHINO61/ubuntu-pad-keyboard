@@ -92,7 +92,7 @@
         </p>
         <p class="hero-note">
           <svg aria-hidden="true"><use href="#i-warn"/></svg>
-          <span data-en-html="Requires <b>GNOME 50 + Wayland</b> on an <b>arm64</b> machine. The .deb is arm64 only; amd64 is not built yet.">需要 <b>GNOME 50 + Wayland</b>，且机器是 <b>arm64</b>；目前只提供 arm64 的 .deb，amd64 待构建。</span>
+          <span data-en-html="Requires <b>GNOME 50 + Wayland</b>. The package is <b>Architecture: all</b>, so arm64 and amd64 both install it.">需要 <b>GNOME 50 + Wayland</b>；安装包标 <b>Architecture: all</b>，arm64 与 amd64 通用。</span>
         </p>
         <a class="hero-tip" href="#download">
           <svg aria-hidden="true" width="15" height="15"><use href="#i-check"/></svg>
@@ -111,7 +111,7 @@
         </div>
         <div class="hero-meta">
           <span class="chip"><b>GNOME Shell 50</b></span>
-          <span class="chip"><b>arm64</b> · Wayland</span>
+          <span class="chip"><b>all</b> · Wayland</span>
           <span class="chip">MIT License</span>
           <span class="chip">v1.0</span>
           <span class="chip"><b>25.5</b> KB</span>
@@ -391,7 +391,7 @@ on=#7cc4ff</code></pre>
             <span class="n">1</span>
             <div>
               <h3 data-en="Get the package">拿到安装包</h3>
-              <p data-en="Download pad-osk_1.0_arm64.deb (25.5 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and arm64 is the only build available.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_1.0_arm64.deb</code>（25.5 KB）。两个仓库内容对等；<strong>目前只有 arm64 构建</strong>。</p>
+              <p data-en="Download pad-osk_1.0.1_all.deb (26.7 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and it is an Architecture: all build.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_1.0.1_all.deb</code>（26.7 KB）。两个仓库内容对等；<strong>一份 all 包，arm64 / amd64 都能装</strong>。</p>
               <div class="code">
                 <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
                 <pre><code>gitee.com/HOSHINO6/ubuntu-pad-keyboard/releases
@@ -407,7 +407,7 @@ github.com/HOSHINO61/ubuntu-pad-keyboard/releases</code></pre>
               <div class="code">
                 <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
                 <pre><code><span class="c"># 在安装包所在目录</span>
-sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
+sudo apt install ./pad-osk_1.0.1_all.deb</code></pre>
               </div>
             </div>
           </div>
@@ -481,10 +481,10 @@ sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
           <h3 style="margin-bottom:14px" data-en="Known limits">已知限制</h3>
           <ul class="list" style="display:grid;gap:10px;font-size:13.6px;color:var(--text-2);list-style:none;margin:0;padding:0">
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Only verified on the OnePlus Pad 2 Pro with GNOME 50 Wayland. Other tablets: self-test.">只在<strong>一加 Pad 2 Pro + GNOME 50 Wayland</strong>上验证过，其它平板自测。</span></li>
-            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en-html="metadata.json declares shell-version 50 only — GNOME 45–49 will not load it. <strong>There is only an arm64 package; amd64 is not built yet.</strong>"><code>metadata.json</code> 只声明 <code>shell-version: [&quot;50&quot;]</code>，GNOME 45–49 不会加载；<strong>只有 arm64 包，amd64 尚未构建</strong>。</span></li>
+            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en-html="metadata.json declares shell-version 50 only — GNOME 45–49 will not load it."><code>metadata.json</code> 只声明 <code>shell-version: [&quot;50&quot;]</code>，GNOME 45–49 不会加载。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The three sizes are absolute pixels calibrated for 1696 px, so a different logical resolution drifts the ratio (adaptive scaling is on the todo list).">三档是<strong>绝对像素</strong>，按 1696 px 逻辑屏宽标定；换不同逻辑分辨率的平板比例会漂（自适应缩放待办中）。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Chinese input needs ibus + ibus-libpinyin (already in Recommends).">打中文需要 <code>ibus</code> + <code>ibus-libpinyin</code>（已在 <code>Recommends</code> 里声明）。</span></li>
-            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The keyboard UI is Chinese only for now; an English UI is planned for 1.0.1.">键盘界面目前只有中文，英文界面计划在 1.0.1（这个网站是双语的，扩展本身还不是）。</span></li>
+            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The UI follows the system language: English source with a Simplified Chinese translation built in.">界面跟随系统语言：英文是源文，内置简体中文翻译（`locale/zh_CN`）。</span></li>
           </ul>
           <a class="link-more" href="tech.html#limits">
             <span data-en="Compatibility details">兼容性细节</span>
@@ -501,8 +501,8 @@ sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
       <div class="section-head reveal">
         <p class="eyebrow" data-en="Download">下载</p>
         <h2 data-en="Download v1.0">下载 v1.0</h2>
-        <p class="lead" data-en="The package is pad-osk_1.0_arm64.deb, 25.5 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
-          安装包 <code>pad-osk_1.0_arm64.deb</code>，25.5 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
+        <p class="lead" data-en="The package is pad-osk_1.0.1_all.deb, 26.7 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
+          安装包 <code>pad-osk_1.0.1_all.deb</code>，26.7 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
         </p>
       </div>
 
@@ -539,10 +539,10 @@ sudo apt install ./pad-osk_1.0_arm64.deb</code></pre>
         <h3 style="margin-bottom:12px" data-en="Checksum and upgrade path">校验与升级</h3>
         <div class="code" style="margin:0">
           <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
-          <pre><code>文件    pad-osk_1.0_arm64.deb（26,104 字节）
-sha256  26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
+          <pre><code>文件    pad-osk_1.0.1_all.deb（27,386 字节）
+sha256  b6c9c76c802ca09c7e5f58f2c1a45a7bfa6ef465b9e95d1631a6fb28ad814fea
 
-sha256sum pad-osk_1.0_arm64.deb</code></pre>
+sha256sum pad-osk_1.0.1_all.deb</code></pre>
         </div>
         <p class="kbd-note" data-en="Upgrading from 0.Beta / 0.Beta2 is a normal upgrade; going back needs --allow-downgrades. The package uses zstd compression, so dpkg must be 1.21.18 or newer.">
           从 <code>0.Beta</code> / <code>0.Beta2</code> 升级属于正常升级；要退回旧版得加 <code>--allow-downgrades</code>。包用 zstd 压缩，要求 <code>dpkg ≥ 1.21.18</code>（Ubuntu 24.04 起自带）。

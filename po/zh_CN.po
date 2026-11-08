@@ -1,0 +1,89 @@
+# Simplified Chinese translation of PAD-OSK.
+# English strings in extension.js are the msgids.
+msgid ""
+msgstr ""
+"Project-Id-Version: pad-osk 1.0.1\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: zh_CN\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "Screen Keyboard"
+msgstr "屏幕键盘"
+
+msgid "⠿  Drag"
+msgstr "⠿  拖动"
+
+msgid "Size"
+msgstr "大小"
+
+msgid "Color"
+msgstr "颜色"
+
+msgid "Opacity"
+msgstr "透明"
+
+msgid "Radius"
+msgstr "圆角"
+
+msgid "Defaults"
+msgstr "默认"
+
+msgid "Graphite"
+msgstr "深灰"
+
+msgid "Light"
+msgstr "浅色"
+
+msgid "Warm"
+msgstr "暖色"
+
+msgid "High contrast"
+msgstr "高对比"
+
+msgid "Custom"
+msgstr "自定义"
+
+msgid "Small"
+msgstr "小"
+
+msgid "Medium"
+msgstr "中"
+
+msgid "Large"
+msgstr "大"
+
+msgid "Square"
+msgstr "直角"
+
+msgid "None"
+msgstr "无"
+
+msgid "Pick…"
+msgstr "选图…"
+
+msgid "Manage…"
+msgstr "管理…"
+
+msgid "Back"
+msgstr "返回"
+
+msgid "Delete"
+msgstr "确认删"
+
+msgid "Cancel"
+msgstr "取消"
+
+msgid "Reset to defaults"
+msgstr "恢复默认"
+
+msgid "(or drop images into ~/.config/pad-osk/backgrounds/)"
+msgstr "（也可把图片放进 ~/.config/pad-osk/backgrounds/）"
+
+msgid "(no images yet)"
+msgstr "（这里还没有图片）"
+
+msgid "Choose keyboard background"
+msgstr "选择键盘背景"

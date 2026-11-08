@@ -288,10 +288,21 @@ background=/home/user/图片/星空.webp
 
 三张都是同一套外观（浅色、100% 透明、圆角大、无背景），差别只在尺寸。
 
+---
+
+## 界面语言
+
+界面跟随系统语言：源码里的字符串是**英文**（msgid），`po/zh_CN.po` 提供简体中文，
+打包时 `msgfmt` 编译成 `locale/zh_CN/LC_MESSAGES/erhai-osk@local.mo` 一起装上。
+系统语言是中文就显示中文，否则显示英文源文。
+
+加别的语言：复制一份 `po/zh_CN.po` 成 `po/<lang>.po`，翻译 `msgstr` 后重新打包即可，
+不用改代码。
+
 ## 安装
 
 ```bash
-sudo apt install ./dist/pad-osk_1.0_arm64.deb
+sudo apt install ./dist/pad-osk_1.0.1_all.deb
 ```
 
 装完建议**重启**（不建议只注销：部分设备的 gdm 登录界面偶发黑屏 + 触屏失效）。
@@ -317,7 +328,7 @@ sudo apt remove pad-osk
 
 ```bash
 sh packaging/build-deb.sh
-# → dist/pad-osk_1.0_arm64.deb
+# → dist/pad-osk_1.0.1_all.deb
 ```
 
 版本号与架构都取自 `packaging/pad-osk/DEBIAN/control`，
@@ -417,8 +428,8 @@ docs/
   （部分机型注销会卡在 GDM 黑屏，只能重启）
 - **GDM 登录界面没有屏幕键盘**（greeter 是独立用户，看不到用户扩展）
 - 长按连发走"按下即发"：按住后手指划开键盘再松手，第一个字符已经发出去了
-- 当前包标注 `Architecture: arm64`；包内实际无架构相关文件，
-  需要跨架构可改回 `all`
+- 包标 `Architecture: all`（纯 JS + shell 脚本，没有架构相关文件），arm64 与 amd64 装同一份
+- 界面翻译目前只有英文源与简体中文（`po/zh_CN.po`），其它语言需要自己加 `po/<lang>.po`
 
 ---
 

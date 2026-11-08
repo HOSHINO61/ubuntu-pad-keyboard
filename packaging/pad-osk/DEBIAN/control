@@ -1,6 +1,6 @@
 Package: pad-osk
-Version: 1.0
-Architecture: arm64
+Version: 1.0.1
+Architecture: all
 Maintainer: erhai <user@opd2413.local>
 Section: utils
 Priority: optional
@@ -8,7 +8,10 @@ Depends: gnome-shell (>= 45), gnome-shell (<< 60), libglib2.0-bin
 Recommends: ibus, ibus-libpinyin
 Description: On-screen keyboard with palettes, sizes and transparency
  A GNOME Shell extension that draws a PC-style on-screen keyboard and injects
- keys through Clutter.VirtualInputDevice, inside the compositor.
+ keys through Clutter.VirtualInputDevice, inside the compositor. Tested on
+ the OnePlus Pad 2 Pro; any device running GNOME 50 Wayland should work.
+ The interface is translated (English source, Simplified Chinese included)
+ and follows the system language.
  .
  This is the only approach that works on GNOME Wayland: normal windows cannot
  accept a click without stealing keyboard focus, and mutter refuses external

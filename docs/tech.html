@@ -431,7 +431,7 @@ on=#7cc4ff</code></pre>
       <div class="section-head reveal">
         <p class="eyebrow" data-en="Compatibility">兼容性</p>
         <h2 data-en="What it needs, and where it stops">需要什么，以及到哪儿为止</h2>
-        <p class="lead" data-en-html="Short version: an <b>arm64</b> machine running <b>GNOME 50 on Wayland</b>. arm64 is the only build shipped — amd64 is not done.">一句话：<b>arm64</b> 机器 + <b>GNOME 50 Wayland</b>。目前只发布了 arm64 构建，<b>amd64 还没做</b>。</p>
+        <p class="lead" data-en-html="Short version: <b>GNOME 50 on Wayland</b>, any architecture — the package is <code>Architecture: all</code>.">一句话：<b>GNOME 50 Wayland</b>，架构不限——安装包标 <code>Architecture: all</code>。</p>
       </div>
 
       <div class="table-wrap reveal">
@@ -442,7 +442,7 @@ on=#7cc4ff</code></pre>
             <tr><td><strong data-en="System">系统</strong></td><td data-en="Ubuntu already installed on the tablet following the upstream project; this repository only covers touch input.">已按上游项目完成 Ubuntu 安装；本仓库只负责<strong>触屏输入</strong>这一块。</td></tr>
             <tr><td><strong data-en="Desktop">桌面</strong></td><td data-en="GNOME 50 with a Wayland session. X11 sessions, KDE and other compositors do not work — the extension relies on mutter's Clutter.VirtualInputDevice and Main.layoutManager.">GNOME 50、Wayland 会话。X11 会话、KDE、其它合成器不能用——它依赖 mutter 的 <code>Clutter.VirtualInputDevice</code> 与 <code>Main.layoutManager</code>。</td></tr>
             <tr><td><strong data-en="IME">输入法</strong></td><td data-en="ibus + ibus-libpinyin for Chinese (declared in Recommends).">打中文需要 <code>ibus</code> + <code>ibus-libpinyin</code>（已在 <code>Recommends</code> 中声明）。</td></tr>
-            <tr><td><strong data-en="Architecture">架构</strong></td><td data-en-html="<strong>arm64 only.</strong> The deb is marked arm64 and no amd64 build exists yet. The package contains no architecture-specific files, so an amd64 build should be possible by switching to <code>all</code> — but that has not been built or tested."><strong>只有 arm64。</strong>deb 标注 <code>arm64</code>，<strong>amd64 版本尚未构建</strong>。包内实际没有架构相关文件，理论上把 control 改回 <code>all</code> 或为 amd64 构建即可，但既没构建也没验证。</td></tr>
+            <tr><td><strong data-en="Architecture">架构</strong></td><td data-en-html="<code>Architecture: all</code> — the package is pure JS plus shell scripts, so one build installs on arm64 and amd64 alike."><code>Architecture: all</code>：包内是纯 JS + shell 脚本，没有架构相关文件，arm64 与 amd64 装同一份。</td></tr>
           </tbody>
         </table>
       </div>
@@ -456,7 +456,7 @@ on=#7cc4ff</code></pre>
             <li data-en="The three steps are absolute pixels calibrated on 1696 px; a tablet with a different logical width drifts (todo: adapt to the screen width).">三档是绝对像素，按 1696 px 标定；不同逻辑分辨率的平板比例会漂（待办：改为按屏宽比例自适应）。</li>
             <li data-en="No smart avoidance around the caret — the keyboard stays where you put it.">没有随候选框位置自动避让，键盘停在你放的位置。</li>
             <li data-en="The GDM greeter has no on-screen keyboard: the greeter is a separate user and cannot see a user extension.">GDM 登录界面没有屏幕键盘：greeter 是独立用户，看不到用户扩展。</li>
-            <li data-en="The keyboard UI is Chinese only for now; an English UI is planned for 1.0.1.">键盘界面目前只有中文，英文界面计划在 1.0.1。</li>
+            <li data-en="The UI follows the system language (English source, Simplified Chinese translation).">界面跟随系统语言（英文源 + 简体中文翻译）。</li>
             <li data-en="The deb uses zstd compression, so dpkg must be 1.21.18 or newer (Ubuntu 24.04+).">deb 用 zstd 压缩，需要 <code>dpkg ≥ 1.21.18</code>（Ubuntu 24.04 起自带）。</li>
           </ul>
         </div>
@@ -472,7 +472,7 @@ on=#7cc4ff</code></pre>
             <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
             <pre><code><span class="c"># 构建（需要 dpkg-deb）</span>
 sh packaging/build-deb.sh
-<span class="c"># → dist/pad-osk_1.0_arm64.deb</span></code></pre>
+<span class="c"># → dist/pad-osk_1.0.1_all.deb</span></code></pre>
           </div>
         </div>
       </div>

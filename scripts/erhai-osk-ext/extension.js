@@ -49,6 +49,25 @@ const XK = {
 
 const POS_FILE = 'pad-osk/position.kf';
 
+// ---- translations ----------------------------------------------------
+// Every user-visible string below is written in English as the msgid and looked
+// up through T() at render time, so a translation may be loaded (or fail to
+// load) long after the module was parsed.  Domains are bound in enable(): the
+// compiled .mo files ship inside the extension as locale/<lang>/LC_MESSAGES/<uuid>.mo.
+const DOMAIN = 'erhai-osk@local';
+let _translationsBound = false;
+
+function T(text) {
+    if (!_translationsBound || !text)
+        return text;
+    try {
+        // dgettext returns the msgid itself when there is no translation.
+        return GLib.dgettext(DOMAIN, text);
+    } catch (e) {
+        return text;
+    }
+}
+
 // Hold-to-repeat: every character key repeats while held, plus the keys people
 // actually hold down.  Sticky modifiers, shift, symbol and the IME key never
 // repeat -- repeating those would arm a modifier or a chord by accident.
@@ -85,7 +104,7 @@ const STATE_FILE = 'pad-osk/visible';
 // re-applied in place by _applyScale() -- no actor is ever rebuilt.
 const THEMES = [
     {
-        name: 'graphite', label: '深灰',
+        name: 'graphite', label: 'Graphite',
         panel: '18,20,22', panelAlpha: 0.97, panelAlt: 'rgba(0,0,0,0.25)',
         key: ['#4a4e53', '#ffffff'],
         mod: ['#5a5f65', '#ffdc8a'],
@@ -100,7 +119,7 @@ const THEMES = [
         swatch: ['#4a4e53', '#ffffff'],
     },
     {
-        name: 'light', label: '浅色',
+        name: 'light', label: 'Light',
         panel: '244,246,249', panelAlpha: 0.98, panelAlt: 'rgba(15,23,42,0.07)',
         key: ['#ffffff', '#1b1e21'],
         mod: ['#e8eef6', '#8a5a00'],
@@ -115,7 +134,7 @@ const THEMES = [
         swatch: ['#ffffff', '#1b1e21'],
     },
     {
-        name: 'warm', label: '暖色',
+        name: 'warm', label: 'Warm',
         panel: '43,37,32', panelAlpha: 0.97, panelAlt: 'rgba(0,0,0,0.22)',
         key: ['#5b5046', '#fdf6ec'],
         mod: ['#6d6052', '#ffd9a0'],
@@ -130,7 +149,7 @@ const THEMES = [
         swatch: ['#5b5046', '#fdf6ec'],
     },
     {
-        name: 'contrast', label: '高对比',
+        name: 'contrast', label: 'High contrast',
         panel: '0,0,0', panelAlpha: 1.0, panelAlt: '#111111',
         key: ['#1a1a1a', '#ffffff'],
         mod: ['#262600', '#ffff00'],
@@ -216,7 +235,7 @@ function makeCustomTheme(source) {
     const {panel, key, mod, act, on} = source;
     const glyph = fgFor(key);
     return {
-        name: CUSTOM_THEME, label: '自定义',
+        name: CUSTOM_THEME, label: 'Custom',
         panel: hexToRgb(panel).join(','),
         panelAlpha: 1.0,
         panelAlt: 'rgba(0,0,0,0.25)',
@@ -261,9 +280,9 @@ let BACKGROUND_URI = null;
 // scale_large=, plus size= and theme=) can override all three, so tuning needs
 // neither a rebuild nor a re-login.
 const SIZE_STEPS = [
-    {name: 'small', label: '小', scale: 0.72},
-    {name: 'medium', label: '中', scale: 0.85},
-    {name: 'large', label: '大', scale: 0.99},
+    {name: 'small', label: 'Small', scale: 0.72},
+    {name: 'medium', label: 'Medium', scale: 0.85},
+    {name: 'large', label: 'Large', scale: 0.99},
 ];
 const DEFAULT_SIZE = 'medium';
 const SCALE_MIN = 0.40;
@@ -280,10 +299,10 @@ const px = (value, scale) => `${Math.max(1, Math.round(value * scale))}px`;
 // original design exactly (keys 8, panel 16, grip 10, small buttons 8, sheet
 // 12); larger steps round the keys into pills, 0 makes them square.
 const RADIUS_STEPS = [
-    {value: 0, label: '直角'},
-    {value: 8, label: '小'},
-    {value: 16, label: '中'},
-    {value: 26, label: '大'},
+    {value: 0, label: 'Square'},
+    {value: 8, label: 'Small'},
+    {value: 16, label: 'Medium'},
+    {value: 26, label: 'Large'},
 ];
 const DEFAULT_RADIUS = 8;
 const RADIUS_MIN = 0;
@@ -437,7 +456,7 @@ function makeQsClasses(QS) {
     }, class OskToggle extends QS.QuickToggle {
         _init(kbd) {
             super._init({
-                title: '屏幕键盘',
+                title: T('Screen Keyboard'),
                 iconName: 'input-keyboard-symbolic',
                 toggleMode: true,
                 checked: !kbd._hidden,
@@ -479,6 +498,18 @@ export default class ErhaiOSK extends Extension {
     enable() {
         log('erhai-osk: v15 enable (settings sheet, themes, sizes, repeat)');
         try {
+            // Point gettext at the extension's own locale/ directory.  The
+            // package installs locale/<lang>/LC_MESSAGES/erhai-osk@local.mo, so
+            // this also works from a system-wide install.
+            try {
+                const localeDir = GLib.build_filenamev([this.path ?? '', 'locale']);
+                GLib.bindtextdomain(DOMAIN, localeDir);
+                GLib.dgettext(DOMAIN, '');
+                _translationsBound = true;
+            } catch (e) {
+                log(`erhai-osk: locale setup failed: ${e}`);
+            }
+
             const seat = this._makeSeat();
             if (!seat) {
                 log('erhai-osk: no Clutter seat');
@@ -766,7 +797,7 @@ export default class ErhaiOSK extends Extension {
 
         this._dragArea = new St.BoxLayout({reactive: true, x_expand: true});
         this._dragArea.add_child(new St.Label({
-            text: '⠿  拖动',
+            text: T('⠿  Drag'),
             y_align: Clutter.ActorAlign.CENTER,
         }));
         this._dragArea.connect('button-press-event', this._onGripPress.bind(this));
@@ -823,11 +854,11 @@ export default class ErhaiOSK extends Extension {
         this._sectionLabels = [];
 
         const sizeRow = new St.BoxLayout({reactive: false});
-        sizeRow.add_child(this._sectionLabel('大小'));
+        sizeRow.add_child(this._sectionLabel(T('Size')));
         for (const step of this._steps) {
             const btn = new St.Button({
                 child: new St.Label({
-                    text: step.label,
+                    text: T(step.label),
                     y_align: Clutter.ActorAlign.CENTER,
                 }),
                 style: sizeBtnStyle(step.name === this._sizeName, this._scale),
@@ -842,11 +873,11 @@ export default class ErhaiOSK extends Extension {
         this._settings.add_child(sizeRow);
 
         const themeRow = new St.BoxLayout({reactive: false});
-        themeRow.add_child(this._sectionLabel('颜色'));
+        themeRow.add_child(this._sectionLabel(T('Color')));
         for (const theme of this._themes) {
             const btn = new St.Button({
                 child: new St.Label({
-                    text: theme.label,
+                    text: T(theme.label),
                     y_align: Clutter.ActorAlign.CENTER,
                 }),
                 style: themeBtnStyle(
@@ -862,7 +893,7 @@ export default class ErhaiOSK extends Extension {
         this._settings.add_child(themeRow);
 
         const opacityRow = new St.BoxLayout({reactive: false});
-        opacityRow.add_child(this._sectionLabel('透明'));
+        opacityRow.add_child(this._sectionLabel(T('Opacity')));
         for (const step of OPACITY_STEPS) {
             const btn = new St.Button({
                 child: new St.Label({
@@ -882,11 +913,11 @@ export default class ErhaiOSK extends Extension {
         this._settings.add_child(opacityRow);
 
         const radiusRow = new St.BoxLayout({reactive: false});
-        radiusRow.add_child(this._sectionLabel('圆角'));
+        radiusRow.add_child(this._sectionLabel(T('Radius')));
         for (const step of RADIUS_STEPS) {
             const btn = new St.Button({
                 child: new St.Label({
-                    text: step.label,
+                    text: T(step.label),
                     y_align: Clutter.ActorAlign.CENTER,
                 }),
                 style: sizeBtnStyle(
@@ -1045,7 +1076,7 @@ export default class ErhaiOSK extends Extension {
             bus.call('org.freedesktop.portal.Desktop',
                 '/org/freedesktop/portal/desktop',
                 'org.freedesktop.portal.FileChooser', 'OpenFile',
-                new GLib.Variant('(ssa{sv})', ['', '选择键盘背景', options]),
+                new GLib.Variant('(ssa{sv})', ['', T('Choose keyboard background'), options]),
                 null, Gio.DBusCallFlags.NONE, -1, null,
                 (_conn, res) => {
                     try {
@@ -1174,7 +1205,7 @@ export default class ErhaiOSK extends Extension {
             this._backgroundBtns[value ?? '__none__'] = btn;
         };
 
-        add(null, '无');
+        add(null, T('None'));
 
         const files = this._backgroundFiles();
         // A picture picked with the system chooser can live anywhere, so show it
@@ -1186,15 +1217,15 @@ export default class ErhaiOSK extends Extension {
             add(file, base.length > 10 ? `${base.slice(0, 10)}…` : base);
         }
 
-        this._pickBtn = button('选图…', false, () => this._pickBackground());
-        this._manageBtn = button('管理…', false, () => {
+        this._pickBtn = button(T('Pick…'), false, () => this._pickBackground());
+        this._manageBtn = button(T('Manage…'), false, () => {
             this._bgMode = 'manage';
             this._buildBackgroundRow();
         });
 
         if (!files.length && !this._background) {
             this._bgRow.add_child(new St.Label({
-                text: '（也可把图片放进 ~/.config/pad-osk/backgrounds/）',
+                text: T('(or drop images into ~/.config/pad-osk/backgrounds/)'),
                 y_align: Clutter.ActorAlign.CENTER,
                 style: sectionLabelStyle(this._scale),
             }));
@@ -1205,7 +1236,7 @@ export default class ErhaiOSK extends Extension {
     // button, plus a way back.  Deleting a file is the only thing that really
     // forgets a backdrop -- 无 and 恢复默认 both keep the remembered path.
     _buildBackgroundManageRow(button) {
-        button('返回', false, () => {
+        button(T('Back'), false, () => {
             this._cancelDeleteBackground(false);
             this._bgMode = 'pick';
             this._buildBackgroundRow();
@@ -1218,7 +1249,7 @@ export default class ErhaiOSK extends Extension {
             files.unshift(this._background);
         if (!files.length) {
             this._bgRow.add_child(new St.Label({
-                text: '（这里还没有图片）',
+                text: T('(no images yet)'),
                 y_align: Clutter.ActorAlign.CENTER,
                 style: sectionLabelStyle(this._scale),
             }));
@@ -1247,7 +1278,7 @@ export default class ErhaiOSK extends Extension {
                 // Second step of the confirmation: the ✕ became two buttons.
                 const confirm = new St.Button({
                     child: new St.Label({
-                        text: '确认删',
+                        text: T('Delete'),
                         y_align: Clutter.ActorAlign.CENTER,
                     }),
                     style: `${sizeBtnStyle(true, this._scale)}`
@@ -1261,7 +1292,7 @@ export default class ErhaiOSK extends Extension {
 
                 const cancel = new St.Button({
                     child: new St.Label({
-                        text: '取消',
+                        text: T('Cancel'),
                         y_align: Clutter.ActorAlign.CENTER,
                     }),
                     style: sizeBtnStyle(false, this._scale),
@@ -1413,10 +1444,10 @@ export default class ErhaiOSK extends Extension {
 
     _buildResetRow() {
         const row = new St.BoxLayout({reactive: false});
-        row.add_child(this._sectionLabel('默认'));
+        row.add_child(this._sectionLabel(T('Defaults')));
         this._resetBtn = new St.Button({
             child: new St.Label({
-                text: '恢复默认',
+                text: T('Reset to defaults'),
                 y_align: Clutter.ActorAlign.CENTER,
             }),
             style: sizeBtnStyle(false, this._scale),

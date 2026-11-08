@@ -158,6 +158,31 @@ sha256    26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
 
 ---
 
+## 验证记录（2026-11-08，1.0.1，构建机）
+
+1.0.1 换掉两件事：`Architecture: all`（一包通吃 arm64/amd64）与界面翻译。
+
+```
+构建      pad-osk_1.0.1_all.deb（27,386 字节）
+          在 Ubuntu 24.04 x86_64 虚拟机上用 dpkg-deb 1.22.6 + msgfmt 0.21 构建
+sha256    b6c9c76c802ca09c7e5f58f2c1a45a7bfa6ef465b9e95d1631a6fb28ad814fea
+字段      Package: pad-osk  Version: 1.0.1  Architecture: all
+包内      control.tar.zst + data.tar.zst
+载荷      extension.js / metadata.json / pad-osk / pad-osk.desktop
+          locale/zh_CN/LC_MESSAGES/erhai-osk@local.mo（1,380 字节）
+          extension.js / metadata.json / pad-osk 与工作区 sha256 逐一相同
+权限      脚本 0755，其余 0644（含 .mo）
+翻译      msgunfmt 回读 27 条 msgid，中文 msgstr 完整
+```
+
+⚠️ 从 `1.0 arm64` 升到 `1.0.1 all` 是正常升级（dpkg 允许具体架构变 all）；
+反向回退仍需 `--allow-downgrades`。
+
+**构建依赖**：`dpkg-deb` 与 `msgfmt`（`apt install gettext`）。缺 `msgfmt` 时
+`build-deb.sh` 会直接报错退出，不会静默打出没有翻译的包。
+
+---
+
 ## 改版本号
 
 改 `packaging/pad-osk/DEBIAN/control` 里的 `Version:`（和需要时的
@@ -167,8 +192,9 @@ sha256    26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
 
 ## 已知限制
 
-- 当前 `Architecture: arm64`（按需求命名）。包内是纯 JS + shell 脚本、无架构相关
-  文件，若要跨架构分发，把 `control` 改回 `Architecture: all`
+- `Architecture: all`：包内是纯 JS + shell 脚本 + `.mo` 翻译，arm64 / amd64 通用
+- 构建需要 `dpkg-deb` 和 `msgfmt`（gettext）；`po/*.po` 由 `build-deb.sh` 编译成
+  `locale/<lang>/LC_MESSAGES/erhai-osk@local.mo`
 - 依赖 `gnome-shell (>= 45, << 60)`：扩展用了 GNOME 45+ 的 ESM 扩展 API
   和 `Clutter.VirtualInputDevice`
 - 只在 **GNOME 50.1 / Ubuntu 26.04.1 / arm64** 上实测过
