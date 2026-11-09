@@ -343,6 +343,46 @@ on=#7cc4ff</code></pre>
     </div>
   </section>
 
+  <!-- ============ EMOJI LAYER ============ -->
+  <section class="section" id="emoji">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-en="Emoji layer">表情层</p>
+        <h2 data-en="Emoji travel through the clipboard, not the keymap">表情不走 keymap，走剪贴板</h2>
+        <p class="lead" data-en="XKB has no emoji keysyms. notify_keyval can carry a Unicode keysym, but several toolkits drop it before it reaches the text field — Firefox is the reliable reproducer. So the default path writes the character to the clipboard and injects Ctrl+V.">
+          XKB 的 keymap 里没有表情。<code>notify_keyval</code> 可以把 Unicode keysym 塞进管线，但不少 toolkit 在到达输入框之前就把它丢了（Firefox 最稳定复现）。所以默认路径是：把字符写进剪贴板，再注入一次 <code>Ctrl+V</code>。
+        </p>
+      </div>
+
+      <div class="grid grid-2" style="align-items:start;gap:18px">
+        <div class="reveal prose">
+          <h3 style="margin-top:0" data-en="Cost and the way out">代价和退路</h3>
+          <p style="color:var(--text-2);font-size:14.2px" data-en="The clipboard route works everywhere but overwrites whatever you had copied. Because the keyboard never takes focus, the injected Ctrl+V lands in whatever window currently has it.">
+            剪贴板这条路到处都能用，代价是覆盖你原来复制的东西。又因为键盘不抢焦点，注入的 <code>Ctrl+V</code> 会落到当前拥有焦点的那个窗口。
+          </p>
+          <p style="color:var(--text-2);font-size:14.2px" data-en="Setting [layout] emoji_mode=keysym switches back to direct Unicode keysyms: no clipboard side effect, but Firefox and some Electron builds silently drop the character.">
+            <code>[layout] emoji_mode=keysym</code> 可以切回直发 Unicode keysym：不碰剪贴板，但 Firefox 和部分 Electron 版本会静默吞字。
+          </p>
+          <p style="color:var(--text-2);font-size:14.2px" data-en="The grid is 3 pages of 32; the bottom row keeps modifiers, space, 中/英 and arrows, so switching back is one tap on the smiley key.">
+            网格是 3 页 × 32；底部那行保留修饰键、空格、中/英 和方向键，所以切回来只要再点一次 <code>😀</code>。
+          </p>
+        </div>
+        <div class="reveal">
+          <div class="code" style="margin-top:0">
+            <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
+            <pre><code><span class="c"># ~/.config/pad-osk/position.kf</span>
+[layout]
+emoji_mode=clipboard   <span class="c"># 默认</span>
+<span class="c"># emoji_mode=keysym    # 直发 Unicode keysym，不碰剪贴板</span></code></pre>
+          </div>
+          <p class="kbd-note" data-en="Since 1.0.1 the extension uuid is pad-osk@local (it was erhai-osk@local). The package removes the old system-wide directory and enables the new id during install, so upgrading from 1.0 needs no manual cleanup.">
+            1.0.1 起扩展 uuid 是 <code>pad-osk@local</code>（原来是 <code>erhai-osk@local</code>）。包会在安装时删掉旧系统级目录并启用新 id，所以从 1.0 升上来不用手动清。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ PITFALLS ============ -->
   <section class="section" id="pitfalls">
     <div class="wrap">
@@ -438,7 +478,7 @@ on=#7cc4ff</code></pre>
         <table>
           <thead><tr><th style="width:24%" data-en="Item">项目</th><th data-en="Requirement">要求</th></tr></thead>
           <tbody>
-            <tr><td><strong data-en="Device">设备</strong></td><td data-en="Any arm64 tablet; verified on the OnePlus Pad 2 Pro (OPD2413 / erhai / SM8750P). Other models are a self-test.">任何 arm64 平板；实测机型为一加平板 2 Pro（OPD2413 / <code>erhai</code> / SM8750P），其它机型自测。</td></tr>
+            <tr><td><strong data-en="Device">设备</strong></td><td data-en="Any machine running Ubuntu with GNOME 50 Wayland. Verified on the OnePlus Pad 2 Pro (OPD2413 / erhai / SM8750P, arm64) and one amd64 desktop. Other models are a self-test.">任何跑 Ubuntu + GNOME 50 Wayland 的设备；实测机型为一加平板 2 Pro（OPD2413 / <code>erhai</code> / SM8750P，arm64）和一台 amd64 机器，其它机型自测。</td></tr>
             <tr><td><strong data-en="System">系统</strong></td><td data-en="Ubuntu already installed on the tablet following the upstream project; this repository only covers touch input.">已按上游项目完成 Ubuntu 安装；本仓库只负责<strong>触屏输入</strong>这一块。</td></tr>
             <tr><td><strong data-en="Desktop">桌面</strong></td><td data-en="GNOME 50 with a Wayland session. X11 sessions, KDE and other compositors do not work — the extension relies on mutter's Clutter.VirtualInputDevice and Main.layoutManager.">GNOME 50、Wayland 会话。X11 会话、KDE、其它合成器不能用——它依赖 mutter 的 <code>Clutter.VirtualInputDevice</code> 与 <code>Main.layoutManager</code>。</td></tr>
             <tr><td><strong data-en="IME">输入法</strong></td><td data-en="ibus + ibus-libpinyin for Chinese (declared in Recommends).">打中文需要 <code>ibus</code> + <code>ibus-libpinyin</code>（已在 <code>Recommends</code> 中声明）。</td></tr>
@@ -451,12 +491,12 @@ on=#7cc4ff</code></pre>
         <div class="card reveal">
           <h3 data-en="Known limits">已知限制</h3>
           <ul style="list-style:none;padding:0;margin:12px 0 0;display:grid;gap:10px;font-size:13.8px;color:var(--text-2)">
-            <li data-en="Verified only on the OnePlus Pad 2 Pro with GNOME 50 Wayland; other arm64 tablets are untested.">只在一加 Pad 2 Pro + GNOME 50 Wayland 上验证过，其它 arm64 平板未测。</li>
+            <li data-en="Verified on two machines: the OnePlus Pad 2 Pro (arm64) and an amd64 desktop, both GNOME 50 Wayland. Other models are untested.">验证过两台：一加 Pad 2 Pro（arm64）和一台 amd64 机器，都是 GNOME 50 Wayland；其它机型未测。</li>
             <li data-en="metadata.json declares shell-version 50 only; GNOME 45 to 49 will not load it, and a major upgrade may need an edit."><code>metadata.json</code> 只声明 <code>shell-version: [&quot;50&quot;]</code>，GNOME 45–49 不会加载；系统大版本升级后可能要改。</li>
             <li data-en="The three steps are absolute pixels calibrated on 1696 px; a tablet with a different logical width drifts (todo: adapt to the screen width).">三档是绝对像素，按 1696 px 标定；不同逻辑分辨率的平板比例会漂（待办：改为按屏宽比例自适应）。</li>
             <li data-en="No smart avoidance around the caret — the keyboard stays where you put it.">没有随候选框位置自动避让，键盘停在你放的位置。</li>
             <li data-en="The GDM greeter has no on-screen keyboard: the greeter is a separate user and cannot see a user extension.">GDM 登录界面没有屏幕键盘：greeter 是独立用户，看不到用户扩展。</li>
-            <li data-en="The UI follows the system language (English source, Simplified Chinese translation).">界面跟随系统语言（英文源 + 简体中文翻译）。</li>
+            <li data-en="Emoji are delivered through the clipboard by default; tapping one overwrites the clipboard.">表情默认经剪贴板发送，点一个表情会覆盖剪贴板内容。</li>
             <li data-en="The deb uses zstd compression, so dpkg must be 1.21.18 or newer (Ubuntu 24.04+).">deb 用 zstd 压缩，需要 <code>dpkg ≥ 1.21.18</code>（Ubuntu 24.04 起自带）。</li>
           </ul>
         </div>

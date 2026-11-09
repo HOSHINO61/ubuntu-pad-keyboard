@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pad-OSK — arm64 版 Ubuntu 的屏幕键盘（GNOME 50 Wayland）</title>
-<meta name="description" content="Pad-OSK 是给 arm64 版 Ubuntu（GNOME 50 Wayland）用的屏幕键盘：按键在合成器内部通过 Clutter.VirtualInputDevice 注入，Electron / Chromium 应用照常收字；UI 是 shell 图层，永不抢焦点。支持中文输入、自定义配色与背景图；任何跑 GNOME 50 Wayland 的设备都能装（实测一加平板 2 Pro，其它机型请自测）。">
+<title>Pad-OSK — Ubuntu 屏幕键盘（GNOME 50 Wayland · arm64 / amd64）</title>
+<meta name="description" content="Pad-OSK 是给 Ubuntu（GNOME 50 Wayland）用的屏幕键盘：按键在合成器内部通过 Clutter.VirtualInputDevice 注入，Electron / Chromium 应用照常收字；UI 是 shell 图层，永不抢焦点。支持中文输入、表情层、自定义配色与背景图；一份 Architecture: all 的 deb，arm64 平板与 amd64 桌面通用（实测一加平板 2 Pro + 一台 amd64，其它机型请自测）。">
 <meta name="theme-color" content="#0b0d10">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Pad-OSK — 装进 Pad 上的 Ubuntu 屏幕键盘">
@@ -21,8 +21,8 @@
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
 <link rel="stylesheet" href="assets/css/site.css">
 </head>
-<body data-title-zh="Pad-OSK — arm64 版 Ubuntu 的屏幕键盘（GNOME 50 Wayland）"
-      data-title-en="Pad-OSK — an on-screen keyboard for arm64 Ubuntu (GNOME 50 Wayland)">
+<body data-title-zh="Pad-OSK — Ubuntu 屏幕键盘（GNOME 50 Wayland · arm64 / amd64）"
+      data-title-en="Pad-OSK — an on-screen keyboard for Ubuntu (GNOME 50 Wayland · arm64 / amd64)">
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
@@ -50,6 +50,8 @@
     <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M21 16.5 16 11l-6 6-3-3-4 4"/></symbol>
     <symbol id="i-corner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9a5 5 0 0 1 5-5h11"/><path d="M9 4h5"/><path d="M4 14v3"/></symbol>
     <symbol id="i-reset" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 0 2.7-6.2"/><path d="M3 4v5h5"/></symbol>
+    <symbol id="i-emoji" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.4 14.6a4.6 4.6 0 0 0 7.2 0"/><circle cx="9" cy="9.8" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="9.8" r=".9" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-tap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.6"/><path d="M7.6 7.6a6.2 6.2 0 0 0 0 8.8M16.4 7.6a6.2 6.2 0 0 1 0 8.8"/><path d="M4.6 4.6a10.5 10.5 0 0 0 0 14.8M19.4 4.6a10.5 10.5 0 0 1 0 14.8"/></symbol>
   </defs>
 </svg>
 
@@ -58,13 +60,14 @@
     <a class="brand" href="index.html">
       <img src="favicon.svg" alt="" width="26" height="26">
       <span>Pad-OSK</span>
-      <span class="brand-sub">arm64 Ubuntu</span>
+      <span class="brand-sub">arm64 / amd64</span>
     </a>
     <nav class="nav-links" aria-label="主导航">
       <a href="#why" data-en="Why">为什么</a>
       <a href="#how" data-en="How it works">工作原理</a>
       <a href="#sizes" data-en="Sizes">三档尺寸</a>
       <a href="#theme" data-en="Appearance">外观</a>
+      <a href="#emoji" data-en="Emoji">表情</a>
       <a href="#features" data-en="Features">功能</a>
       <a href="#install" data-en="Install">安装</a>
       <a href="tech.html" data-en="Technical notes">技术方案</a>
@@ -85,10 +88,10 @@
   <section class="wrap hero">
     <div class="hero-grid">
       <div class="hero-copy">
-        <span class="kicker"><i class="dot"></i><span data-en="arm64 tablets · GNOME 50 Wayland">arm64 平板通用 · GNOME 50 Wayland</span></span>
+        <span class="kicker"><i class="dot"></i><span data-en="arm64 tablets · amd64 desktops · GNOME 50 Wayland">arm64 平板 / amd64 桌面 · GNOME 50 Wayland</span></span>
         <h1 data-typewriter data-en-html="An on-screen keyboard <span class=&quot;hl&quot;>for Ubuntu on your pad</span>">装进 Pad 上的<br><span class="hl">Ubuntu 屏幕键盘</span></h1>
         <p class="lead" data-en="Put arm64 Ubuntu on a tablet and the touchscreen is only half useful: GNOME's own keyboard never appears in QQ or Chrome, and third-party keyboards cannot deliver a single character. Pad-OSK puts the keyboard inside GNOME Shell — keys are injected by the compositor, applications receive real keyboard events, and the keyboard itself never steals focus from the field you are typing in.">
-          arm64 版 Ubuntu 装在平板上，触屏只用得上一半：GNOME 自带的键盘在 QQ、Chrome 里弹不出来，第三方键盘又打不进字。Pad-OSK 把键盘做进 GNOME Shell —— 按键由合成器注入，应用收到的是真实键盘事件，而键盘本身永远不会抢走输入框的焦点。
+          arm64 版 Ubuntu 装在平板上，触屏只用得上一半：GNOME 自带的键盘在 QQ、Chrome 里弹不出来，第三方键盘又打不进字。Pad-OSK 把键盘做进 GNOME Shell —— 按键由合成器注入，应用收到的是真实键盘事件，而键盘本身永远不会抢走输入框的焦点。1.0.1 起同一份 deb 也装得进 amd64 桌面。
         </p>
         <p class="hero-note">
           <svg aria-hidden="true"><use href="#i-warn"/></svg>
@@ -96,7 +99,7 @@
         </p>
         <a class="hero-tip" href="#download">
           <svg aria-hidden="true" width="15" height="15"><use href="#i-check"/></svg>
-          <span data-en="v1.0 is officially released">v1.0 已正式发布</span>
+          <span data-en="v1.0.1 is officially released">v1.0.1 已正式发布</span>
           <svg aria-hidden="true" width="13" height="13" style="opacity:.75"><use href="#i-arrow"/></svg>
         </a>
         <div class="hero-cta">
@@ -113,8 +116,8 @@
           <span class="chip"><b>GNOME Shell 50</b></span>
           <span class="chip"><b>all</b> · Wayland</span>
           <span class="chip">MIT License</span>
-          <span class="chip">v1.0</span>
-          <span class="chip"><b>25.5</b> KB</span>
+          <span class="chip">v1.0.1</span>
+          <span class="chip"><b>29.4</b> KB</span>
         </div>
       </div>
 
@@ -340,6 +343,33 @@ on=#7cc4ff</code></pre>
     </div>
   </section>
 
+  <!-- ============ EMOJI ============ -->
+  <section class="section" id="emoji">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow" data-en="Emoji layer">表情层</p>
+        <h2 data-en="One 😀 key, a whole emoji grid">一个 😀 键，换掉整个字母区</h2>
+        <p class="lead" data-en="Tap 😀 at the bottom right and the letter area becomes an emoji grid — three pages of 32. The bottom row, modifiers and the 中/英 key stay put, so you can still commit and switch input source.">
+          点右下角的 <strong>😀</strong>，字母区整块换成表情网格：3 页，每页 32 个，翻页键在底部那条。底部那行（Ctrl / Alt / 空格 / 中英 / 方向键）原地不动，选完表情还能接着打字。
+        </p>
+      </div>
+
+      <figure class="shot-frame reveal" style="margin:0">
+        <img src="assets/img/v1.0.1-emoji.webp"
+             alt="表情层：字母区被 4×8 的表情网格替换，底部显示第 1/3 页，😀 键高亮"
+             width="1920" height="1358" loading="lazy" decoding="async">
+        <figcaption class="shot-cap">
+          <span class="led"><i></i><span data-en="Emoji page 1 / 3 · graphite palette">表情第 1 / 3 页 · 深灰配色</span></span>
+          <span data-en="Ubuntu 26.04 · GNOME 50.1">Ubuntu 26.04 · GNOME 50.1</span>
+        </figcaption>
+      </figure>
+
+      <p class="kbd-note" style="margin-top:16px" data-en="Emoji are not XKB keysyms, and a Unicode keysym is dropped by several toolkits (Firefox especially), so the default path is clipboard plus Ctrl+V. That means tapping an emoji overwrites your clipboard; [layout] emoji_mode=keysym switches back to direct keysyms.">
+        表情不在 XKB keymap 里，而直接发 Unicode keysym 会被不少 toolkit 丢掉（Firefox 尤其明显），所以默认走<strong>剪贴板 + Ctrl+V</strong>——代价是点一个表情会覆盖剪贴板。想换回直发 keysym，在 <code>position.kf</code> 里写 <code>[layout] emoji_mode=keysym</code>。
+      </p>
+    </div>
+  </section>
+
   <!-- ============ FEATURES ============ -->
   <section class="section" id="features">
     <div class="wrap">
@@ -364,6 +394,9 @@ on=#7cc4ff</code></pre>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-corner"/></svg></span><div><h3 data-en="Corner radius">四档圆角</h3><p data-en="Square, small, medium, large — 0 / 8 / 16 / 26 px. Keys, panel and grip bar change together.">直角 / 小 / 中 / 大（0 / 8 / 16 / 26 px），键面、面板、拖动条一起变，不会只圆一半。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-image"/></svg></span><div><h3 data-en="Custom backdrop">自定义背景</h3><p data-en="Pick an image with the system file chooser, or drop png / jpg / webp into ~/.config/pad-osk/backgrounds/ and tap the name.">「选图…」调系统文件选择器，或者把 png / jpg / webp 放进 <code>~/.config/pad-osk/backgrounds/</code> 直接点名字；铺法是 cover 等比裁切。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-reset"/></svg></span><div><h3 data-en="One-tap reset">恢复默认</h3><p data-en="Back to medium size, graphite, 100 %, no backdrop, centred at the bottom. Your [custom] colours and backdrop file names survive.">一键回中档 + 深灰 + 100 % + 无背景 + 屏幕底部居中；<code>[custom]</code> 配色和背景文件名不会跟着丢。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-emoji"/></svg></span><div><h3 data-en="Emoji layer">表情层 😀</h3><p data-en="The 😀 key swaps the letter area for a 3-page × 32 emoji grid; the bottom row stays put and tapping 😀 again returns to letters.">底部 <strong>😀</strong> 键把字母区换成 3 页 × 32 个表情网格，底部那行不动；再点一次切回字母。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-tap"/></svg></span><div><h3 data-en="Key feedback">按键反馈</h3><p data-en="A pressed key takes the theme accent colour and returns on release; a held key keeps the highlight. Visual only — this tablet's mainline kernel exposes no vibrator.">按下键面变主题强调色、松手复原，长按连发时一直亮着。只有视觉反馈——这台平板的 mainline 内核没有暴露振动硬件。</p></div></article>
+        <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-globe"/></svg></span><div><h3 data-en="Follows the system language">界面跟随系统语言</h3><p data-en="gettext: English source strings, Simplified Chinese translation built in. Another language is just a po file and a repackage.">界面走 gettext：源文是英文，内置简体中文；加别的语言只要丢一个 <code>po</code> 文件重新打包。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-move"/></svg></span><div><h3 data-en="Drag and collapse">可拖动 · 可收起</h3><p data-en="Hold the grip bar to move it, ⌄ collapses it to a thin strip, ✕ closes it. The position survives a reboot.">按住拖动条定位，⌄ 收起成细条，✕ 关闭；位置与档位重启后还在。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-toggle"/></svg></span><div><h3 data-en="Two entry points, one state">两个入口，一个状态</h3><p data-en="The Quick Settings switch and the Pad-OSK app icon share one state file, so the two never disagree.">Quick Settings 的「屏幕键盘」开关与应用抽屉里的 Pad-OSK 图标共用同一个状态文件，不会各说各话。</p></div></article>
         <article class="feature reveal"><span class="fi"><svg aria-hidden="true"><use href="#i-focus"/></svg></span><div><h3 data-en="Never steals focus">不抢焦点</h3><p data-en="The UI is a shell layer, so tapping a key does not move the caret out of the field you were typing in.">UI 是 shell 图层而不是窗口，点键盘不会把光标从输入框里赶走。</p></div></article>
@@ -391,7 +424,7 @@ on=#7cc4ff</code></pre>
             <span class="n">1</span>
             <div>
               <h3 data-en="Get the package">拿到安装包</h3>
-              <p data-en="Download pad-osk_1.0.1_all.deb (26.7 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and it is an Architecture: all build.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_1.0.1_all.deb</code>（26.7 KB）。两个仓库内容对等；<strong>一份 all 包，arm64 / amd64 都能装</strong>。</p>
+              <p data-en="Download pad-osk_1.0.1_all.deb (29.4 KB) from the Gitee or GitHub release page. Both repositories carry the same content, and it is an Architecture: all build.">从 Gitee 或 GitHub 的 Release 页面下载 <code>pad-osk_1.0.1_all.deb</code>（29.4 KB）。两个仓库内容对等；<strong>一份 all 包，arm64 / amd64 都能装</strong>。</p>
               <div class="code">
                 <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
                 <pre><code>gitee.com/HOSHINO6/ubuntu-pad-keyboard/releases
@@ -458,7 +491,7 @@ sudo apt install ./pad-osk_1.0.1_all.deb</code></pre>
         <p class="eyebrow" data-en="Tested on">实测范围</p>
         <h2 data-en="Honest about what has been verified">哪些验证过，哪些没有</h2>
         <p class="lead" data-en="It should run on any arm64 tablet with Ubuntu and GNOME 50 Wayland—but all of the following was verified on one machine: a OnePlus Pad 2 Pro running Ubuntu 26.04.1 LTS with GNOME Shell 50.1. Other tablets are a self-test.">
-          任何装了 arm64 版 Ubuntu、跑 GNOME 50 Wayland 的平板都应该能用——但下面这些只在一台机器上验证过：一加 Pad 2 Pro，Ubuntu 26.04.1 LTS，GNOME Shell 50.1，arm64。其它机型请自测。
+          任何装了 Ubuntu、跑 GNOME 50 Wayland 的设备都应该能用——实际验证过两台：一加 Pad 2 Pro（arm64，Ubuntu 26.04.1 / GNOME 50.1）和一台 amd64 机器（2026-11-09 实装通过）。其它机型请自测。
         </p>
       </div>
 
@@ -480,11 +513,11 @@ sudo apt install ./pad-osk_1.0.1_all.deb</code></pre>
         <div class="card reveal" style="padding:22px">
           <h3 style="margin-bottom:14px" data-en="Known limits">已知限制</h3>
           <ul class="list" style="display:grid;gap:10px;font-size:13.6px;color:var(--text-2);list-style:none;margin:0;padding:0">
-            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Only verified on the OnePlus Pad 2 Pro with GNOME 50 Wayland. Other tablets: self-test.">只在<strong>一加 Pad 2 Pro + GNOME 50 Wayland</strong>上验证过，其它平板自测。</span></li>
+            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Verified on two machines: the OnePlus Pad 2 Pro (arm64) and an amd64 desktop, both GNOME 50 Wayland. Other models are a self-test.">验证过两台：<strong>一加 Pad 2 Pro（arm64）</strong>和一台 <strong>amd64</strong> 机器，都是 GNOME 50 Wayland；其它机型请自测。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en-html="metadata.json declares shell-version 50 only — GNOME 45–49 will not load it."><code>metadata.json</code> 只声明 <code>shell-version: [&quot;50&quot;]</code>，GNOME 45–49 不会加载。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The three sizes are absolute pixels calibrated for 1696 px, so a different logical resolution drifts the ratio (adaptive scaling is on the todo list).">三档是<strong>绝对像素</strong>，按 1696 px 逻辑屏宽标定；换不同逻辑分辨率的平板比例会漂（自适应缩放待办中）。</span></li>
             <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Chinese input needs ibus + ibus-libpinyin (already in Recommends).">打中文需要 <code>ibus</code> + <code>ibus-libpinyin</code>（已在 <code>Recommends</code> 里声明）。</span></li>
-            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="The UI follows the system language: English source with a Simplified Chinese translation built in.">界面跟随系统语言：英文是源文，内置简体中文翻译（`locale/zh_CN`）。</span></li>
+            <li style="display:flex;gap:9px"><svg style="width:15px;height:15px;flex:none;margin-top:4px;color:var(--accent-2)" aria-hidden="true"><use href="#i-warn"/></svg><span data-en="Emoji go through the clipboard by default, so tapping one overwrites what you had copied.">表情默认走剪贴板，点一个表情会覆盖你原来复制的内容。</span></li>
           </ul>
           <a class="link-more" href="tech.html#limits">
             <span data-en="Compatibility details">兼容性细节</span>
@@ -500,9 +533,9 @@ sudo apt install ./pad-osk_1.0.1_all.deb</code></pre>
     <div class="wrap">
       <div class="section-head reveal">
         <p class="eyebrow" data-en="Download">下载</p>
-        <h2 data-en="Download v1.0">下载 v1.0</h2>
-        <p class="lead" data-en="The package is pad-osk_1.0.1_all.deb, 26.7 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
-          安装包 <code>pad-osk_1.0.1_all.deb</code>，26.7 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
+        <h2 data-en="Download v1.0.1">下载 v1.0.1</h2>
+        <p class="lead" data-en="The package is pad-osk_1.0.1_all.deb, 29.4 KB. Two mirrors with identical trees but different commit SHAs — each side replays the commits under its own account identity. Mainland China: Gitee. Elsewhere: GitHub.">
+          安装包 <code>pad-osk_1.0.1_all.deb</code>，29.4 KB。两个镜像的 tree 完全一致、提交 SHA 不同——两边用各自的账号身份重放提交。中国大陆走 Gitee，海外走 GitHub。
         </p>
       </div>
 
@@ -539,20 +572,20 @@ sudo apt install ./pad-osk_1.0.1_all.deb</code></pre>
         <h3 style="margin-bottom:12px" data-en="Checksum and upgrade path">校验与升级</h3>
         <div class="code" style="margin:0">
           <button class="copy" type="button" aria-label="Copy"><svg aria-hidden="true"><use href="#i-copy"/></svg></button>
-          <pre><code>文件    pad-osk_1.0.1_all.deb（27,386 字节）
-sha256  b6c9c76c802ca09c7e5f58f2c1a45a7bfa6ef465b9e95d1631a6fb28ad814fea
+          <pre><code>文件    pad-osk_1.0.1_all.deb（30,152 字节）
+sha256  471836c743e976d5c8519b1d6a95e7e974d1205f05512d3fa48ab0851cf66695
 
 sha256sum pad-osk_1.0.1_all.deb</code></pre>
         </div>
-        <p class="kbd-note" data-en="Upgrading from 0.Beta / 0.Beta2 is a normal upgrade; going back needs --allow-downgrades. The package uses zstd compression, so dpkg must be 1.21.18 or newer.">
-          从 <code>0.Beta</code> / <code>0.Beta2</code> 升级属于正常升级；要退回旧版得加 <code>--allow-downgrades</code>。包用 zstd 压缩，要求 <code>dpkg ≥ 1.21.18</code>（Ubuntu 24.04 起自带）。
+        <p class="kbd-note" data-en="Upgrading from 1.0 (arm64) or the 0.Beta series is a normal upgrade path; going back needs --allow-downgrades. The package uses zstd compression, so dpkg must be 1.21.18 or newer.">
+          从 <code>1.0</code>（arm64）或 <code>0.Beta</code> 系列升级都是正常路径；要退回旧版得加 <code>--allow-downgrades</code>。包用 zstd 压缩，要求 <code>dpkg ≥ 1.21.18</code>（Ubuntu 24.04 起自带）。
         </p>
       </div>
 
       <div class="callout" style="margin-top:18px">
         <span class="ico"><svg aria-hidden="true"><use href="#i-warn"/></svg></span>
-        <span data-en="Built for arm64 Ubuntu on GNOME 50 Wayland. Installing Ubuntu on the tablet itself is a separate, per-device upstream project — this repository only covers the touch-input half.">
-          面向 <strong>arm64 版 Ubuntu + GNOME 50 Wayland</strong>。把 Ubuntu 装进平板是各机型自己的上游项目，本仓库只负责<strong>触屏输入</strong>这一块。
+        <span data-en="Built for Ubuntu on GNOME 50 Wayland — arm64 tablets and amd64 desktops alike. Installing Ubuntu on the tablet itself is a separate, per-device upstream project; this repository only covers the touch-input half.">
+          面向 <strong>Ubuntu + GNOME 50 Wayland</strong>，arm64 平板和 amd64 桌面同一份包。把 Ubuntu 装进平板是各机型自己的上游项目，本仓库只负责<strong>触屏输入</strong>这一块。
         </span>
       </div>
     </div>
@@ -568,8 +601,8 @@ sha256sum pad-osk_1.0.1_all.deb</code></pre>
           <img src="favicon.svg" alt="" width="26" height="26">
           <span>Pad-OSK</span>
         </a>
-        <p data-en="A GNOME Shell on-screen keyboard for arm64 Ubuntu. Keys injected inside the compositor; focus never stolen; Chinese input included.">
-          给 arm64 版 Ubuntu 的 GNOME 屏幕键盘。合成器内注入按键，不抢焦点，支持中文输入。
+        <p data-en="A GNOME Shell on-screen keyboard for Ubuntu on GNOME 50 Wayland — arm64 tablets and amd64 desktops. Keys injected inside the compositor; focus never stolen; Chinese and emoji input included.">
+          给 Ubuntu（GNOME 50 Wayland）的 GNOME 屏幕键盘，arm64 平板与 amd64 桌面通用。合成器内注入按键，不抢焦点，支持中文输入和表情。
         </p>
       </div>
       <div>
