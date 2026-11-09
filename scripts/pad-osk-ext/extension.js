@@ -268,6 +268,51 @@ function makeCustomTheme(source) {
     };
 }
 
+// 自定义配色: the swatches offered per role.  Only the background of each role
+// is chosen here -- the glyph colour is derived from its luminance by
+// makeCustomTheme(), so a light swatch never keeps white text.
+// Each row is a different kind of colour, so the roles stay distinguishable
+// instead of turning into five rows of the same grey:
+//   panel  darkest neutrals (and two paper tones for a light keyboard)
+//   key    neutrals one step lighter than the panel
+//   mod    muted colour, keys that carry a label
+//   act    the muted colour's darker sibling
+//   on     vivid accents
+const CUSTOM_ROLES = [
+    {
+        key: 'panel', label: 'Panel',
+        colors: ['#0f1115', '#1b2026', '#2b3340', '#3a2f28',
+            '#1a2635', '#2c1f2e', '#f7f4ee', '#ffffff'],
+    },
+    {
+        key: 'key', label: 'Keys',
+        colors: ['#3a4048', '#4a525c', '#33393f', '#4a3f33',
+            '#3c4c5e', '#4d3b4a', '#e9e3d7', '#dbe0e6'],
+    },
+    {
+        key: 'mod', label: 'Modifiers',
+        colors: ['#2f6f9e', '#3f7f63', '#7f6b3f', '#8f5a4a',
+            '#5a5f8f', '#6f4f7f', '#cfc7b8', '#b9c0c8'],
+    },
+    {
+        key: 'act', label: 'Actions',
+        colors: ['#27566f', '#2f5f4a', '#5f5030', '#6b4438',
+            '#454a6b', '#543c5f', '#b8b0a2', '#9aa1a8'],
+    },
+    {
+        key: 'on', label: 'Accent',
+        colors: ['#7cc4ff', '#ffd479', '#8fe3a1', '#ff9db0',
+            '#c7a3ff', '#ff9f68', '#6ee7d7', '#f2f2f2'],
+    },
+];
+const CUSTOM_DEFAULT = {
+    panel: '#1b2026',
+    key: '#3a4048',
+    mod: '#4a525c',
+    act: '#434c56',
+    on: '#7cc4ff',
+};
+
 // Set by the extension from [layout] background=<path>; kept as a plain URI
 // string so this section stays free of gi:// imports (the style test slices it
 // out and runs it in bare Node).
@@ -420,12 +465,23 @@ const sizeBtnStyle = (active, scale) =>
 // A theme button carries its own colours (that is the preview); the border is
 // what marks the active one.  The border is always drawn, in the swatch colour
 // when idle, so switching themes cannot leave a stale outline behind.
-const themeBtnStyle = (active, scale, theme) =>
-    `background-color: ${theme.swatch[0]}; color: ${theme.swatch[1]};`
-    + ` border: ${px(3, scale)} solid ${active ? THEME.accent : theme.swatch[0]};`
-    + ` border-radius: ${pxSoft(radiusSmall(), scale)};`
-    + ` padding: ${px(4, scale)} ${px(12, scale)};`
-    + ` margin: ${px(3, scale)}; font-size: ${px(18, scale)};`;
+// Win11-style theme picker: a preview card rather than a text button.  Each
+// card paints its own panel colour and shows a row of key chips, so the palette
+// is visible before it is applied.
+const themeCardStyle = (active, scale, theme) =>
+    `background-color: rgb(${theme.panel});`
+    + ` border: ${px(2, scale)} solid `
+    + `${active ? THEME.accent : 'rgba(128,128,128,0.45)'};`
+    + ` border-radius: ${pxSoft(Math.max(8, radiusSmall() + 4), scale)};`
+    + ` padding: ${px(7, scale)} ${px(10, scale)};`
+    + ` margin: ${px(3, scale)};`;
+
+const themeChipStyle = (color, wide, scale) =>
+    `background-color: ${color};`
+    + ` border-radius: ${pxSoft(Math.max(3, radiusSmall() - 3), scale)};`
+    + ` width: ${Math.round((wide ? 28 : 13) * scale)}px;`
+    + ` height: ${Math.round(13 * scale)}px;`
+    + ` margin: ${px(2, scale)};`;
 
 // The settings sheet sits inside the panel, so it needs its own tint to read as
 // a separate surface; panelAlt is that tint per theme.
@@ -439,6 +495,22 @@ const sectionLabelStyle = scale =>
     `color: ${THEME.grip[1]};`
     + ` font-size: ${px(16, scale)};`
     + ` padding: ${px(2, scale)} ${px(12, scale)} ${px(2, scale)} ${px(4, scale)};`;
+
+// A colour chip: a fixed square (so the grid columns line up and the shape
+// matches the rounded keys instead of coming out as an arbitrary ellipse), the
+// theme accent as an outline when it is the colour in use.
+const SWATCH_PX = 30;
+const swatchSize = scale => Math.max(16, Math.round(SWATCH_PX * scale));
+
+const swatchStyle = (color, active, scale) => {
+    const size = swatchSize(scale);
+    return `background-color: ${color};`
+        + ` border: ${px(2, scale)} solid `
+        + `${active ? THEME.accent : shade(color, -0.35)};`
+        + ` border-radius: ${pxSoft(6, scale)};`
+        + ` width: ${size}px; height: ${size}px;`
+        + ` padding: 0; margin: ${px(2, scale)};`;
+};
 
 const shiftGlyphStyle = (on, scale) =>
     `color: ${on ? THEME.shift[1] : THEME.shift[0]};`
@@ -649,8 +721,16 @@ export default class ErhaiOSK extends Extension {
 
             // The custom palette has to exist before the remembered theme name
             // is resolved, because 'custom' is only a valid choice once it does.
-            this._custom = makeCustomTheme(cfg ? cfg.custom : null);
-            this._themes = this._custom ? [...THEMES, this._custom] : [...THEMES];
+            this._customHex = {...CUSTOM_DEFAULT};
+            if (cfg && cfg.custom) {
+                for (const role of Object.keys(CUSTOM_DEFAULT)) {
+                    const value = cfg.custom[role];
+                    if (typeof value === 'string' && hexToRgb(value))
+                        this._customHex[role] = value;
+                }
+            }
+            this._custom = makeCustomTheme(this._customHex);
+            this._themes = [...THEMES, this._custom];
             this._themeName = cfg && this._themes.some(t => t.name === cfg.theme)
                 ? cfg.theme : DEFAULT_THEME;
             THEME = this._themes.find(t => t.name === this._themeName);
@@ -815,6 +895,8 @@ export default class ErhaiOSK extends Extension {
         this._emojiOpen = false;
         this._savedConfig = null;
         this._custom = null;
+        this._customBox = null;
+        this._swatchBtns = [];
         this._themes = [...THEMES];
         this._background = null;
         this._backgroundOn = false;
@@ -959,25 +1041,61 @@ export default class ErhaiOSK extends Extension {
         }
         this._settings.add_child(sizeRow);
 
-        const themeRow = new St.BoxLayout({reactive: false});
-        themeRow.add_child(this._sectionLabel(T('Color')));
-        for (const theme of this._themes) {
-            const btn = new St.Button({
-                child: new St.Label({
-                    text: T(theme.label),
-                    y_align: Clutter.ActorAlign.CENTER,
-                }),
-                style: themeBtnStyle(
-                    theme.name === this._themeName, this._scale, theme),
-                reactive: true,
-                can_focus: false,
-                track_hover: true,
-            });
-            btn.connect('clicked', () => this._setTheme(theme.name));
-            themeRow.add_child(btn);
+        const colorRow = new St.BoxLayout({reactive: false});
+        colorRow.add_child(this._sectionLabel(T('Color')));
+        this._settings.add_child(colorRow);
+
+        this._themeGrid = new Clutter.GridLayout({
+            column_spacing: Math.round(6 * this._scale),
+            row_spacing: Math.round(6 * this._scale),
+        });
+        const themeGrid = new St.Widget({
+            layout_manager: this._themeGrid,
+            reactive: false,
+            x_expand: true,
+        });
+        // One row: the cards share the width instead of wrapping 3 + 2.
+        this._themeCols = this._themes.length;
+        this._themes.forEach((theme, index) => {
+            const btn = this._themeCard(theme);
+            this._themeGrid.attach(btn,
+                index % this._themeCols,
+                Math.floor(index / this._themeCols), 1, 1);
             this._themeBtns[theme.name] = btn;
+        });
+        this._settings.add_child(themeGrid);
+
+        // 自定义配色编辑器: five rows of chips, only shown while the custom
+        // palette is the active theme.
+        const grid = new Clutter.GridLayout({
+            row_spacing: Math.round(2 * this._scale),
+            column_spacing: Math.round(2 * this._scale),
+        });
+        this._customLayout = grid;
+        this._customBox = new St.Widget({
+            layout_manager: grid,
+            reactive: false,
+            x_expand: true,
+            visible: this._themeName === CUSTOM_THEME,
+        });
+        this._swatchBtns = [];
+        let gridRow = 0;
+        for (const role of CUSTOM_ROLES) {
+            grid.attach(this._sectionLabel(T(role.label)), 0, gridRow, 1, 1);
+            role.colors.forEach((color, column) => {
+                const btn = new St.Button({
+                    style: swatchStyle(color, false, this._scale),
+                    reactive: true,
+                    can_focus: false,
+                    track_hover: true,
+                });
+                btn.connect('clicked', () => this._setCustomColor(role.key, color));
+                grid.attach(btn, column + 1, gridRow, 1, 1);
+                this._swatchBtns.push({btn, role: role.key, color});
+            });
+            gridRow++;
         }
-        this._settings.add_child(themeRow);
+        this._settings.add_child(this._customBox);
 
         const opacityRow = new St.BoxLayout({reactive: false});
         opacityRow.add_child(this._sectionLabel(T('Opacity')));
@@ -1811,6 +1929,89 @@ export default class ErhaiOSK extends Extension {
     // ---- theme (深灰 / 浅色 / 暖色 / 高对比 / 自定义) -----------------
     // Restyle in place, exactly like a size change: nothing is rebuilt, so a
     // finger resting on a key keeps the button it started on.
+    _setCustomColor(role, color) {
+        if (!CUSTOM_ROLES.some(r => r.key === role))
+            return;
+        const next = {...this._customHex, [role]: color};
+        const theme = makeCustomTheme(next);
+        if (!theme)
+            return;
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._customHex = next;
+        this._custom = theme;
+        this._themes[this._themes.length - 1] = theme;
+        THEME = theme;
+        this._themeName = CUSTOM_THEME;
+        this._applyScale();
+        this._syncCustomEditor();
+        this._saveConfig();
+        log(`pad-osk: custom ${role} -> ${color}`);
+        this._reflow(oldHeight);
+    }
+
+    // Show the chip rows only for the custom theme, and outline the chips that
+    // are currently in use.
+    _syncCustomEditor() {
+        if (!this._customBox)
+            return;
+        if (this._customLayout) {
+            const gap = Math.round(2 * this._scale);
+            this._customLayout.row_spacing = gap;
+            this._customLayout.column_spacing = gap;
+        }
+        const active = this._themeName === CUSTOM_THEME;
+        this._customBox.visible = active;
+        for (const item of this._swatchBtns ?? []) {
+            if (item.btn)
+                item.btn.style = swatchStyle(
+                    item.color, this._customHex[item.role] === item.color,
+                    this._scale);
+        }
+    }
+
+    _restyleSwatches() {
+        this._syncCustomEditor();
+    }
+
+    // One preview card: panel colour as the card, a row of key chips, the
+    // theme name on top of its own key colour.
+    _themeCard(theme) {
+        const s = this._scale;
+        const content = new St.BoxLayout({vertical: true, reactive: false});
+
+        const chips = new St.BoxLayout({
+            reactive: false,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        chips.add_child(new St.Widget({style: themeChipStyle(theme.key[0], false, s)}));
+        chips.add_child(new St.Widget({style: themeChipStyle(theme.key[0], true, s)}));
+        chips.add_child(new St.Widget({style: themeChipStyle(theme.mod[0], false, s)}));
+        chips.add_child(new St.Widget({style: themeChipStyle(theme.on[0], false, s)}));
+        content.add_child(chips);
+
+        content.add_child(new St.Label({
+            // Beta marker: the chip editor is new and the derived glyph colours
+            // may still need tuning on light palettes.
+            text: theme.name === CUSTOM_THEME
+                ? `${T(theme.label)}(Beta)` : T(theme.label),
+            style: `color: ${theme.key[1]}; font-size: ${px(13, s)};`,
+            x_align: Clutter.ActorAlign.CENTER,
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+
+        const btn = new St.Button({
+            child: content,
+            style: themeCardStyle(
+                theme.name === this._themeName, s, theme),
+            reactive: true,
+            x_expand: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        btn.connect('clicked', () => this._setTheme(theme.name));
+        return btn;
+    }
+
     _setTheme(name) {
         const theme = this._themes.find(t => t.name === name);
         if (!theme || theme.name === this._themeName)
@@ -1819,6 +2020,7 @@ export default class ErhaiOSK extends Extension {
         THEME = theme;
         this._themeName = name;
         this._applyScale();
+        this._syncCustomEditor();
         this._saveConfig();
         log(`pad-osk: theme -> ${name}`);
         this._reflow(oldHeight);
@@ -2000,6 +2202,7 @@ export default class ErhaiOSK extends Extension {
         this._updateThemeButtons();
         this._updateOpacityButtons();
         this._updateRadiusButtons();
+        this._restyleSwatches();
         if (this._resetBtn)
             this._resetBtn.style = sizeBtnStyle(false, s);
         this._styleIfAlive(this._pickBtn, sizeBtnStyle(false, s));
@@ -2035,9 +2238,15 @@ export default class ErhaiOSK extends Extension {
     _updateThemeButtons() {
         for (const theme of this._themes) {
             const btn = this._themeBtns[theme.name];
-            if (btn)
-                btn.style = themeBtnStyle(
+            if (btn) {
+                btn.style = themeCardStyle(
                     theme.name === this._themeName, this._scale, theme);
+            }
+        }
+        if (this._themeGrid) {
+            const gap = Math.round(6 * this._scale);
+            this._themeGrid.column_spacing = gap;
+            this._themeGrid.row_spacing = gap;
         }
     }
 
@@ -2780,10 +2989,12 @@ export default class ErhaiOSK extends Extension {
             // lost position/size/theme/opacity every time there was no
             // background.
             // The user's palette is their own data: carry it over verbatim.
-            if (prev && prev.custom) {
+            const palette = this._customHex
+                ?? (prev && prev.custom ? prev.custom : null);
+            if (palette) {
                 for (const key of ['panel', 'key', 'mod', 'act', 'on']) {
-                    if (prev.custom[key])
-                        kf.set_string('custom', key, prev.custom[key]);
+                    if (palette[key])
+                        kf.set_string('custom', key, palette[key]);
                 }
             }
             for (const key of ['scale_small', 'scale_medium', 'scale_large']) {

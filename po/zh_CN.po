@@ -102,3 +102,18 @@ msgstr "较小"
 
 msgid "Larger"
 msgstr "较大"
+
+msgid "Panel"
+msgstr "面板"
+
+msgid "Keys"
+msgstr "键面"
+
+msgid "Modifiers"
+msgstr "修饰"
+
+msgid "Actions"
+msgstr "按键"
+
+msgid "Accent"
+msgstr "强调"
