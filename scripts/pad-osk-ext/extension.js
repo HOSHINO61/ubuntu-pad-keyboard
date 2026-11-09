@@ -298,9 +298,11 @@ let BACKGROUND_URI = null;
 // _reflow() corrects it once from the real panel width (text labels make the
 // width slightly non-linear in the scale).
 const SIZE_STEPS = [
+    {name: 'xsmall', label: 'Smaller', scale: 0.60, fraction: 0.45},
     {name: 'small', label: 'Small', scale: 0.72, fraction: 0.55},
     {name: 'medium', label: 'Medium', scale: 0.85, fraction: 0.66},
     {name: 'large', label: 'Large', scale: 0.99, fraction: 0.76},
+    {name: 'xlarge', label: 'Larger', scale: 1.08, fraction: 0.85},
 ];
 const DEFAULT_SIZE = 'medium';
 const SCALE_MIN = 0.40;
@@ -314,7 +316,9 @@ function clampScale(value) {
 }
 
 function findStep(steps, name) {
-    return steps.find(s => s.name === name) ?? steps[1];
+    return steps.find(s => s.name === name)
+        ?? steps.find(s => s.name === DEFAULT_SIZE)
+        ?? steps[0];
 }
 
 // The scale that should make `step` occupy its fraction of this monitor.
@@ -346,11 +350,15 @@ const RADIUS_MAX = 40;
 let RADIUS = DEFAULT_RADIUS;
 
 // Derived radii keep the proportions of the shipped look at every step.
+// RADIUS 0 means square everywhere -- including the panel, the grip bar and
+// the settings sheet, which used to keep a 10-16px rounding and made the
+// "square" step look half-done.  Anything above 0 keeps the proportion of the
+// shipped design (keys 8, panel 16, grip 10, small buttons 8, sheet 12).
 const radiusKey = () => RADIUS;
-const radiusPanel = () => Math.max(16, RADIUS * 2);
-const radiusGrip = () => Math.max(10, RADIUS + 2);
-const radiusSmall = () => Math.max(8, RADIUS);
-const radiusSheet = () => Math.max(12, RADIUS + 4);
+const radiusPanel = () => (RADIUS === 0 ? 0 : Math.max(16, RADIUS * 2));
+const radiusGrip = () => (RADIUS === 0 ? 0 : Math.max(10, RADIUS + 2));
+const radiusSmall = () => (RADIUS === 0 ? 0 : Math.max(8, RADIUS));
+const radiusSheet = () => (RADIUS === 0 ? 0 : Math.max(12, RADIUS + 4));
 
 // px() floors at 1px so no border ever vanishes by accident; a corner radius is
 // the one place where 0 is a real value (直角), so it gets its own helper.
@@ -1831,6 +1839,8 @@ export default class ErhaiOSK extends Extension {
         // the step already in use still gets applied, on the next click.
         if (name === this._sizeName && target === this._scale)
             return;
+        this._fitBest = null;
+        this._fitDone = false;
 
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._sizeName = name;
@@ -1924,17 +1934,38 @@ export default class ErhaiOSK extends Extension {
         const target = mon.width * step.fraction;
         if (target <= 0)
             return;
-        const ratio = target / width;
-        if (Math.abs(ratio - 1) < 0.015)
+
+        // Panel width moves in whole-pixel steps (key widths are rounded), so
+        // the target can sit exactly between two achievable widths: 54% then
+        // 56% then 54% ... forever.  Keep the best measurement for the current
+        // size step, and when a correction cannot improve on it, put the best
+        // scale back and stop.
+        const err = Math.abs(width - target);
+        const best = this._fitBest;
+        if (!best || err < best.err) {
+            this._fitBest = {width, scale: this._scale, err};
+        } else {
+            if (best.scale !== this._scale) {
+                this._scale = best.scale;
+                this._applyScale();
+                log(`pad-osk: fit keep ${best.scale} (${best.width}px is `
+                    + `${Math.round(best.err / target * 100)}% off)`);
+            }
+            this._fitDone = true;
             return;
-        const next = clampScale(this._scale * ratio);
+        }
+        if (this._fitDone)
+            return;
+        if (err / target < 0.02)
+            return;
+        const next = clampScale(this._scale * (target / width));
         if (Math.abs(next - this._scale) < 0.01)
             return;
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._scale = next;
         this._applyScale();
         log(`pad-osk: fit ${width} -> ${Math.round(target)}px `
-            + `(${Math.round(ratio * 100)}%), scale ${next}`);
+            + `(${Math.round(target / width * 100)}%), scale ${next}`);
         this._reflow(oldHeight);
     }
 
@@ -2042,7 +2073,7 @@ export default class ErhaiOSK extends Extension {
             const btn = this._radiusBtns[step.value];
             if (btn)
                 btn.style = sizeBtnStyle(
-                    Math.abs(step.value - this._radius) < 0.001, this._scale);
+                    step.value === this._radius, this._scale);
         }
     }
 

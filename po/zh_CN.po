@@ -96,3 +96,9 @@ msgstr "管理"
 
 msgid "IME"
 msgstr "中/英"
+
+msgid "Smaller"
+msgstr "较小"
+
+msgid "Larger"
+msgstr "较大"
