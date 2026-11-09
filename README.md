@@ -323,6 +323,21 @@ emoji_mode=keysym    ; 默认 paste
 
 `keysym` 在部分应用里能用、Firefox 里基本不行，自己试哪种更合适。
 
+## 触摸反馈
+
+按下任何键，键面立刻换成主题的强调色，松手复原；长按连发时高亮一直保持着，等于提示
+"这个键正在连发"。
+
+只有视觉反馈——这台平板的 mainline 内核**没有暴露振动硬件**：
+
+```
+/sys/class/leds/         只有屏幕背光，没有 vibrator
+/sys/class/timed_output/ 空
+/proc/bus/input/devices  ff= 0 个（触摸屏无 force feedback）
+```
+
+等内核把那颗马达接出来，再加震动。
+
 ## 安装
 
 ```bash

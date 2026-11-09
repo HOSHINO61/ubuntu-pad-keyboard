@@ -1998,10 +1998,83 @@ export default class ErhaiOSK extends Extension {
     }
 
     _key(def) {
-        if (def.kind === 'key')
-            return this._charKey(def);
-        return this._plainKey(def);
+        const btn = def.kind === 'key'
+            ? this._charKey(def)
+            : this._plainKey(def);
+        if (btn)
+            this._attachFeedback(btn, def);
+        return btn;
     }
+
+    // ---- press feedback ------------------------------------------------
+    // A pressed key flashes to the "on" colour and falls back to whatever style
+    // it had.  Visual only: this tablet's mainline kernel exposes neither a
+    // vibrator device nor force feedback, so haptics have no path here.
+    _attachFeedback(btn, def) {
+        btn.connect('button-press-event', () => {
+            this._flash(btn, def);
+            return Clutter.EVENT_PROPAGATE;
+        });
+        btn.connect('button-release-event', () => {
+            this._unflash(btn, def);
+            return Clutter.EVENT_PROPAGATE;
+        });
+        btn.connect('touch-event', (_a, event) => {
+            const type = event.type();
+            if (type === Clutter.EventType.TOUCH_BEGIN) {
+                this._flash(btn, def);
+            } else if (type === Clutter.EventType.TOUCH_END
+                       || type === Clutter.EventType.TOUCH_CANCEL) {
+                this._unflash(btn, def);
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+        // St.Button's internal click gesture owns the touch sequence, so once
+        // it takes over the actor never sees TOUCH_END or a button release --
+        // the same reason _attachRepeat stops its timer here.  Without this a
+        // key stays lit until something else restyles it.
+        btn.connect('clicked', () => this._unflash(btn, def));
+    }
+
+    _flash(btn, def) {
+        if (!btn || btn._flashed)
+            return;
+        btn._flashed = true;
+        // Belt and braces: if no release signal ever arrives, do not leave the
+        // key lit forever.
+        btn._flashTimeoutId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT, 1500, () => {
+                btn._flashTimeoutId = 0;
+                this._unflash(btn, def);
+                return GLib.SOURCE_REMOVE;
+            });
+        try {
+            btn.style = keyStyle('on', def.minW ?? 82, this._scale);
+        } catch (e) {
+            /* disposed */
+        }
+    }
+
+    _unflash(btn, def) {
+        if (!btn || !btn._flashed)
+            return;
+        btn._flashed = false;
+        if (btn._flashTimeoutId) {
+            GLib.source_remove(btn._flashTimeoutId);
+            btn._flashTimeoutId = 0;
+        }
+        try {
+            // Recompute rather than restoring a saved string: the key may have
+            // become "armed" (sticky modifier) or the size may have changed
+            // while it was down.
+            const kind = def.kind ?? 'key';
+            const active = def.mod ? this._modActive(def.mod) : false;
+            btn.style = keyStyle(active ? 'on' : kind, def.minW ?? 82, this._scale);
+        } catch (e) {
+            /* disposed */
+        }
+    }
+
 
     _charKey(def) {
         const upperCaseLetter = /^[a-z]$/.test(def.base);
