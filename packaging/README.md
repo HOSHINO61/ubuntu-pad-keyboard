@@ -173,6 +173,8 @@ sha256    471836c743e976d5c8519b1d6a95e7e974d1205f05512d3fa48ab0851cf66695
           extension.js / metadata.json / pad-osk 与工作区 sha256 逐一相同
 权限      脚本 0755，其余 0644（含 .mo）
 翻译      msgunfmt 回读 27 条 msgid，中文 msgstr 完整
+实机      2026-11-09：arm64 平板（OPD2413 / Ubuntu 26.04.1）与 **amd64** 机器
+          均已安装验证通过；模式面板、表情层、按键高亮、中文界面正常
 ```
 
 ⚠️ 从 `1.0 arm64` 升到 `1.0.1 all` 是正常升级（dpkg 允许具体架构变 all）；
