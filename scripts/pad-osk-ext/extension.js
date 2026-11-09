@@ -632,6 +632,7 @@ export default class ErhaiOSK extends Extension {
                 : DEFAULT_RADIUS;
             RADIUS = this._radius;
             this._background = cfg ? cfg.background : null;
+            this._emojiMode = (cfg && cfg.emoji_mode) || 'paste';
             // "无" only switches the picture off; the path stays remembered so
             // tapping its button again brings it back.  An absent key means the
             // old shape of the file, where a stored path was always shown.
@@ -1699,7 +1700,22 @@ export default class ErhaiOSK extends Extension {
         this._fillEmojiPage();
     }
 
+    // Two ways to deliver a character that is not on the XKB keymap:
+    //   paste  - put it on the clipboard and send Ctrl+V.  Works everywhere
+    //            (Firefox, Chromium, Electron, GTK), which is why it is default.
+    //   keysym - notify_keyval(0x01000000|cp).  Cleaner (no clipboard), but the
+    //            compositor has to map a keysym that no keycode carries; many
+    //            toolkits drop it.  Kept for the apps where it does work.
+    // Override with [layout] emoji_mode=keysym|paste in position.kf.
     _emitEmoji(glyph) {
+        const mode = (this._emojiMode || 'paste').toLowerCase();
+        if (mode === 'keysym')
+            this._emitEmojiKeysym(glyph);
+        else
+            this._emitEmojiPaste(glyph);
+    }
+
+    _emitEmojiKeysym(glyph) {
         if (!this._vdev)
             return;
         const code = glyph.codePointAt(0);
@@ -1709,12 +1725,39 @@ export default class ErhaiOSK extends Extension {
         const t = Clutter.get_current_event_time();
         this._vdev.notify_keyval(t, keysym, Clutter.KeyState.PRESSED);
         this._vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);
-        // An emoji must never arrive as Ctrl/Alt/Super+something.
+        this._clearStickyMods();
+        log(`pad-osk: emoji U+${code.toString(16).toUpperCase()}`
+            + ` via keysym 0x${keysym.toString(16)}`);
+    }
+
+    _emitEmojiPaste(glyph) {
+        if (!this._vdev)
+            return;
+        const code = glyph.codePointAt(0);
+        try {
+            St.Clipboard.get_default().set_text(
+                St.ClipboardType.CLIPBOARD, glyph);
+        } catch (e) {
+            log(`pad-osk: emoji clipboard failed: ${e}`);
+            return;
+        }
+
+        const t = Clutter.get_current_event_time();
+        const v = Clutter.unicode_to_keysym('v'.codePointAt(0));
+        this._vdev.notify_keyval(t, XK.Control_L, Clutter.KeyState.PRESSED);
+        this._vdev.notify_keyval(t, v, Clutter.KeyState.PRESSED);
+        this._vdev.notify_keyval(t, v, Clutter.KeyState.RELEASED);
+        this._vdev.notify_keyval(t, XK.Control_L, Clutter.KeyState.RELEASED);
+        this._clearStickyMods();
+        log(`pad-osk: emoji U+${code.toString(16).toUpperCase()}`
+            + ' via clipboard+Ctrl+V');
+    }
+
+    // An emoji must never arrive as Ctrl/Alt/Super+something.
+    _clearStickyMods() {
         this._mods = {ctrl: false, alt: false, super: false};
         this._shift = false;
         this._updateVisuals();
-        log(`pad-osk: emoji U+${code.toString(16).toUpperCase()}`
-            + ` (keysym 0x${keysym.toString(16)})`);
     }
 
     // Collapsing the panel or hiding the keyboard both put the sheet away, so a
@@ -2529,6 +2572,7 @@ export default class ErhaiOSK extends Extension {
                 radius: num('radius'),
                 background: str('background'),
                 backgroundEnabled: num('background_enabled'),
+                emoji_mode: str('emoji_mode'),
                 custom,
                 scale_small: num('scale_small'),
                 scale_medium: num('scale_medium'),
@@ -2556,6 +2600,7 @@ export default class ErhaiOSK extends Extension {
             kf.set_string('layout', 'theme', this._themeName || DEFAULT_THEME);
             kf.set_string('layout', 'opacity', String(this._opacity ?? DEFAULT_OPACITY));
             kf.set_string('layout', 'radius', String(this._radius ?? DEFAULT_RADIUS));
+            kf.set_string('layout', 'emoji_mode', this._emojiMode || 'paste');
             if (this._background) {
                 kf.set_string('layout', 'background', this._background);
                 kf.set_string('layout', 'background_enabled',
