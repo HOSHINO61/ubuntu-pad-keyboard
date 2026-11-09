@@ -28,7 +28,38 @@ import GLib from 'gi://GLib';
 import GObject from 'gi://GObject';
 import St from 'gi://St';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
-import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+// Namespace import instead of named: gnome-shell exports `gettext` since 45,
+// and a named import of something missing would break the whole module.
+import * as ShellExtension from 'resource:///org/gnome/shell/extensions/extension.js';
+
+const Extension = ShellExtension.Extension;
+
+// ---- translations ----------------------------------------------------
+// Every user-visible string below is written in English as the msgid and looked
+// up at render time through T().
+//
+// Use the shell's own gettext export: it binds the text domain to this
+// extension's uuid and its locale/ directory when the Extension instance is
+// created.  Do NOT try GLib.bindtextdomain() -- GJS does not expose it (it
+// throws "bindtextdomain is not a function"), which silently left every string
+// untranslated even though the .mo file was installed correctly.
+const _shellGettext = typeof ShellExtension.gettext === 'function'
+    ? ShellExtension.gettext
+    : null;
+
+// Set in enable(): the instance method knows this extension's uuid and binds
+// the domain, which is what actually makes lookups resolve.
+let _gettextFn = null;
+
+function T(text) {
+    if (!text || !_gettextFn)
+        return text;
+    try {
+        return _gettextFn(text);
+    } catch (e) {
+        return text;
+    }
+}
 
 const XK = {
     Escape: 0xff1b,
@@ -48,25 +79,6 @@ const XK = {
 };
 
 const POS_FILE = 'pad-osk/position.kf';
-
-// ---- translations ----------------------------------------------------
-// Every user-visible string below is written in English as the msgid and looked
-// up through T() at render time, so a translation may be loaded (or fail to
-// load) long after the module was parsed.  Domains are bound in enable(): the
-// compiled .mo files ship inside the extension as locale/<lang>/LC_MESSAGES/<uuid>.mo.
-const DOMAIN = 'erhai-osk@local';
-let _translationsBound = false;
-
-function T(text) {
-    if (!_translationsBound || !text)
-        return text;
-    try {
-        // dgettext returns the msgid itself when there is no translation.
-        return GLib.dgettext(DOMAIN, text);
-    } catch (e) {
-        return text;
-    }
-}
 
 // Hold-to-repeat: every character key repeats while held, plus the keys people
 // actually hold down.  Sticky modifiers, shift, symbol and the IME key never
@@ -406,7 +418,8 @@ const act = (label, keysym, minW = 82) => ({label, keysym, minW, kind: 'act'});
 const md = (label, name, minW = 82) => ({label, mod: name, minW, kind: 'mod'});
 // Input-method switch: emits Super+Space, which GNOME maps to "switch input
 // source" (xkb:us <-> ibus:libpinyin).  Saved from accidental Super+Space.
-const ime = (minW = 96) => ({label: '中/英', ime: true, minW, kind: 'mod'});
+// The label is a msgid: English systems show "IME", Chinese ones "中/英".
+const ime = (minW = 96) => ({label: 'IME', ime: true, minW, kind: 'mod'});
 
 const LAYOUT = [
     [
@@ -498,17 +511,15 @@ export default class ErhaiOSK extends Extension {
     enable() {
         log('erhai-osk: v15 enable (settings sheet, themes, sizes, repeat)');
         try {
-            // Point gettext at the extension's own locale/ directory.  The
-            // package installs locale/<lang>/LC_MESSAGES/erhai-osk@local.mo, so
-            // this also works from a system-wide install.
-            try {
-                const localeDir = GLib.build_filenamev([this.path ?? '', 'locale']);
-                GLib.bindtextdomain(DOMAIN, localeDir);
-                GLib.dgettext(DOMAIN, '');
-                _translationsBound = true;
-            } catch (e) {
-                log(`erhai-osk: locale setup failed: ${e}`);
-            }
+            // Prefer the instance method: it is bound to this extension's uuid
+            // and locale/ directory.  The module-level export is only a
+            // fallback.  In either case, "Size" in the log means English and
+            // "大小" means the translation is live.
+            _gettextFn = typeof this.gettext === 'function'
+                ? this.gettext.bind(this)
+                : _shellGettext;
+            log(`erhai-osk: gettext ${_gettextFn ? 'ok' : 'MISSING'}`
+                + `, msg Size -> "${T('Size')}"`);
 
             const seat = this._makeSeat();
             if (!seat) {
@@ -1175,7 +1186,7 @@ export default class ErhaiOSK extends Extension {
         this._pickBtn = null;
         this._manageBtn = null;
         this._bgRow.add_child(new St.Label({
-            text: this._bgMode === 'manage' ? '管理' : '背景',
+            text: this._bgMode === 'manage' ? T('Manage') : T('Background'),
             y_align: Clutter.ActorAlign.CENTER,
             style: sectionLabelStyle(this._scale),
         }));
@@ -1804,7 +1815,7 @@ export default class ErhaiOSK extends Extension {
 
         const btn = new St.Button({
             child: new St.Label({
-                text: def.label,
+                text: T(def.label),
                 x_align: Clutter.ActorAlign.CENTER,
                 y_align: Clutter.ActorAlign.CENTER,
             }),

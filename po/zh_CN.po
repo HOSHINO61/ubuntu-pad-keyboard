@@ -87,3 +87,12 @@ msgstr "（这里还没有图片）"
 
 msgid "Choose keyboard background"
 msgstr "选择键盘背景"
+
+msgid "Background"
+msgstr "背景"
+
+msgid "Manage"
+msgstr "管理"
+
+msgid "IME"
+msgstr "中/英"

@@ -163,9 +163,9 @@ sha256    26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
 1.0.1 换掉两件事：`Architecture: all`（一包通吃 arm64/amd64）与界面翻译。
 
 ```
-构建      pad-osk_1.0.1_all.deb（27,386 字节）
+构建      pad-osk_1.0.1_all.deb（27,620 字节）
           在 Ubuntu 24.04 x86_64 虚拟机上用 dpkg-deb 1.22.6 + msgfmt 0.21 构建
-sha256    b6c9c76c802ca09c7e5f58f2c1a45a7bfa6ef465b9e95d1631a6fb28ad814fea
+sha256    23385ca469d71286182566dcd2eeb419144f68ea5760e8991007869f8b240115
 字段      Package: pad-osk  Version: 1.0.1  Architecture: all
 包内      control.tar.zst + data.tar.zst
 载荷      extension.js / metadata.json / pad-osk / pad-osk.desktop
