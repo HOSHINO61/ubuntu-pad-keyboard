@@ -163,8 +163,8 @@ sha256    26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
 1.0.2 把三档尺寸改成占屏宽的 55% / 66% / 76%，并在测量不可达时停手（不再往返）。
 
 ```
-构建      pad-osk_1.0.2_all.deb（32,590 字节）
-sha256    8bb399c730dee77b5f8071f0e3720823c0b937520ea28532ba602f7b2e00f14e
+构建      pad-osk_1.0.2_all.deb（33,284 字节）
+sha256    e20ae2b7fa920f77b80675e38308be8113a992fda8c8381ea95763d84df1b55e
 字段      Package: pad-osk  Version: 1.0.2  Architecture: all
 实测      1696 px 平板（OPD2413）/ 2558 px 桌面（amd64 VMware）
           小 942 / 1377，中 1120 / 1708，大 1293 / 1933 —— 误差 ≤2 pp
