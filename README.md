@@ -338,7 +338,7 @@ emoji_mode=keysym    ; 默认 paste
 /proc/bus/input/devices  ff= 0 个（触摸屏无 force feedback）
 ```
 
-等内核把那颗马达接出来，再加震动。
+震动方案已放弃：设备本身没有振动马达，不是软件没做。
 
 ## 安装
 
