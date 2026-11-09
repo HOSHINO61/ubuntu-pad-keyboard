@@ -291,17 +291,41 @@ let BACKGROUND_URI = null;
 // ~/.config/pad-osk/position.kf ([layout] scale_small= / scale_medium= /
 // scale_large=, plus size= and theme=) can override all three, so tuning needs
 // neither a rebuild nor a re-login.
+// Each step means a fraction of the monitor width, not a fixed scale: on a
+// 1696px tablet 55% is 927px and on a 1920px desktop it is 1056px, so the
+// keyboard keeps the same visual weight everywhere.  `scale` is the seed value
+// measured on the 1696px tablet; _setSize() turns the fraction into a scale and
+// _reflow() corrects it once from the real panel width (text labels make the
+// width slightly non-linear in the scale).
 const SIZE_STEPS = [
-    {name: 'small', label: 'Small', scale: 0.72},
-    {name: 'medium', label: 'Medium', scale: 0.85},
-    {name: 'large', label: 'Large', scale: 0.99},
+    {name: 'small', label: 'Small', scale: 0.72, fraction: 0.55},
+    {name: 'medium', label: 'Medium', scale: 0.85, fraction: 0.66},
+    {name: 'large', label: 'Large', scale: 0.99, fraction: 0.76},
 ];
 const DEFAULT_SIZE = 'medium';
 const SCALE_MIN = 0.40;
 const SCALE_MAX = 2.00;
+// Panel width at scale 1.00, from the 1.0 measurements (1120px at 0.85).
+const REFERENCE_PANEL_WIDTH = 1310;
+
+function clampScale(value) {
+    return Math.min(SCALE_MAX, Math.max(SCALE_MIN,
+        Math.round(value * 100) / 100));
+}
 
 function findStep(steps, name) {
     return steps.find(s => s.name === name) ?? steps[1];
+}
+
+// The scale that should make `step` occupy its fraction of this monitor.
+// A step with an explicit scale_<name>= override keeps that exact value.
+function scaleForStep(step) {
+    if (step.scaleFixed || !step.fraction)
+        return step.scale;
+    const mon = Main.layoutManager.primaryMonitor;
+    if (!mon || !mon.width)
+        return step.scale;
+    return clampScale(step.fraction * mon.width / REFERENCE_PANEL_WIDTH);
 }
 
 // Whole pixels only: fractional sizes give blurry glyphs in St.
@@ -613,7 +637,7 @@ export default class ErhaiOSK extends Extension {
             this._steps = this._readScales(cfg);
             this._sizeName = cfg && this._steps.some(s => s.name === cfg.size)
                 ? cfg.size : DEFAULT_SIZE;
-            this._scale = findStep(this._steps, this._sizeName).scale;
+            this._scale = scaleForStep(findStep(this._steps, this._sizeName));
 
             // The custom palette has to exist before the remembered theme name
             // is resolved, because 'custom' is only a valid choice once it does.
@@ -1522,7 +1546,7 @@ export default class ErhaiOSK extends Extension {
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._steps = this._readScales();
         this._sizeName = DEFAULT_SIZE;
-        this._scale = findStep(this._steps, DEFAULT_SIZE).scale;
+        this._scale = scaleForStep(findStep(this._steps, DEFAULT_SIZE));
         this._themeName = DEFAULT_THEME;
         THEME = this._themes.find(t => t.name === DEFAULT_THEME);
         this._opacity = DEFAULT_OPACITY;
@@ -1802,14 +1826,15 @@ export default class ErhaiOSK extends Extension {
         if (!this._steps.some(s => s.name === name))
             return;
         const step = findStep(this._steps, name);
+        const target = scaleForStep(step);
         // Same step *and* same factor: nothing to do.  A retuned factor for
         // the step already in use still gets applied, on the next click.
-        if (name === this._sizeName && step.scale === this._scale)
+        if (name === this._sizeName && target === this._scale)
             return;
 
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._sizeName = name;
-        this._scale = step.scale;
+        this._scale = target;
         this._applyScale();
         this._saveConfig();
         log(`pad-osk: size -> ${name} (scale ${this._scale})`);
@@ -1843,8 +1868,10 @@ export default class ErhaiOSK extends Extension {
         const steps = SIZE_STEPS.map(s => ({...s}));
         for (const step of steps) {
             const raw = conf ? conf[`scale_${step.name}`] : null;
-            if (typeof raw === 'number' && raw >= SCALE_MIN && raw <= SCALE_MAX)
+            if (typeof raw === 'number' && raw >= SCALE_MIN && raw <= SCALE_MAX) {
                 step.scale = Math.round(raw * 100) / 100;
+                step.scaleFixed = true;
+            }
         }
         return steps;
     }
@@ -1867,11 +1894,48 @@ export default class ErhaiOSK extends Extension {
             // screenshot: percentage of the monitor width is what we tune for.
             const mon = Main.layoutManager.primaryMonitor;
             const pct = mon ? Math.round(width / mon.width * 100) : 0;
+            // Collapsed to the thin grip bar, or hidden: the width we just
+            // measured is not a keyboard width, so neither log it as one nor
+            // feed it to the fraction fit.
+            const collapsed = !this._rowsBox || !this._rowsBox.visible;
             log(`pad-osk: panel ${width}x${newHeight} `
                 + `(${pct}% of ${mon ? mon.width : 0}px, step ${this._sizeName} `
-                + `scale ${this._scale})`);
+                + `scale ${this._scale}${collapsed ? ', collapsed' : ''})`);
+            if (!collapsed && !this._hidden)
+                this._fitWidth(width, mon);
             return GLib.SOURCE_REMOVE;
         });
+    }
+
+    // The scale->width curve is not perfectly linear (a wider 'Shift' label
+    // stops a row from shrinking), so take one correction from the width that
+    // was actually allocated.  Runs at most twice per size change: after the
+    // correction the ratio is inside the tolerance.
+    _fitWidth(width, mon) {
+        const step = findStep(this._steps, this._sizeName);
+        if (!step || step.scaleFixed || !mon || !mon.width || !width)
+            return;
+        // A bar a third of the screen wide is not the keyboard: never let a
+        // collapsed measurement drag the scale to its clamp.
+        if (width < mon.width * 0.3)
+            return;
+        if (!step.fraction)
+            return;
+        const target = mon.width * step.fraction;
+        if (target <= 0)
+            return;
+        const ratio = target / width;
+        if (Math.abs(ratio - 1) < 0.015)
+            return;
+        const next = clampScale(this._scale * ratio);
+        if (Math.abs(next - this._scale) < 0.01)
+            return;
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._scale = next;
+        this._applyScale();
+        log(`pad-osk: fit ${width} -> ${Math.round(target)}px `
+            + `(${Math.round(ratio * 100)}%), scale ${next}`);
+        this._reflow(oldHeight);
     }
 
     _applyScale() {
