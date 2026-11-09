@@ -304,9 +304,10 @@ on=#7cc4ff
 
 ## 截图
 
-1.0 的设置面板——浅色配色、60% 透明、大圆角，五行设置全在里面：
+1.0.2 的设置面板——主题卡片一行五张（每张带自己的配色缩影），选 `自定义(Beta)` 后
+下面展开五行色块；这张用的是自定义配色（蓝 + 米白）：
 
-![PAD-OSK 1.0 设置面板](docs/images/keyboard-v1.0-settings.png)
+![PAD-OSK 1.0.2 设置面板](docs/images/keyboard-v1.0.2-settings.png)
 
 「中」档（默认）——Quick Settings 里能看到「屏幕键盘」开关，WiFi 名称已打码：
 
