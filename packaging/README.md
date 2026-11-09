@@ -35,7 +35,7 @@ sh packaging/build-deb.sh
 
    | 源 | 目标 |
    |---|---|
-   | `scripts/erhai-osk-ext/extension.js`、`metadata.json` | `/usr/share/gnome-shell/extensions/erhai-osk@local/` |
+   | `scripts/pad-osk-ext/extension.js`、`metadata.json` | `/usr/share/gnome-shell/extensions/pad-osk@local/` |
    | `scripts/pad-osk-toggle.sh` | `/usr/bin/pad-osk` |
    | `scripts/pad-osk.desktop` | `/usr/share/applications/` |
 
@@ -90,11 +90,11 @@ sudo apt install -y --allow-downgrades ./dist/pad-osk_0.Beta_arm64.deb
 
 ### 1. 同名 UUID 的手工安装副本会抢先
 
-设备上原本是手工装的（`~/.local/share/gnome-shell/extensions/erhai-osk@local`）。
+设备上原本是手工装的（`~/.local/share/gnome-shell/extensions/pad-osk@local`）。
 包装到系统级目录后，**同 uuid 两份共存**，shell 会挑其中一份，
 很可能还是旧的——于是"装了新版却毫无变化"。
 
-`postinst` 的处理：把用户级副本**改名**为 `erhai-osk@local.hand-installed`
+`postinst` 的处理：把用户级副本**改名**为 `pad-osk@local.hand-installed`
 而不是删除（用户可能想回溯），然后清掉会遮蔽包内文件的
 `/usr/local/bin/pad-osk` 和 `~/.local/share/applications/pad-osk.desktop`。
 
@@ -122,8 +122,8 @@ Exec=pad-osk
 安装      dpkg -l → ii  pad-osk 0.Beta arm64
 字段      Version: 0.Beta    Architecture: arm64   （与文件名一致）
 文件      /usr/bin/pad-osk, /usr/share/applications/…,
-          /usr/share/gnome-shell/extensions/erhai-osk@local/{extension.js,metadata.json}
-手抄本    已移到 erhai-osk@local.hand-installed
+          /usr/share/gnome-shell/extensions/pad-osk@local/{extension.js,metadata.json}
+手抄本    已移到 pad-osk@local.hand-installed
 旧启动器  /usr/local/bin/pad-osk 已移除
 旧桌面项  ~/.local/share/applications/… 已移除
 启动器    pad-osk → keyboard on / keyboard off（往返正常）
@@ -163,13 +163,13 @@ sha256    26bc5b3a4878a8c3373cddb5f1bcfbda02db0c007e4c4b0313a77ffb913d1c9d
 1.0.1 换掉两件事：`Architecture: all`（一包通吃 arm64/amd64）与界面翻译。
 
 ```
-构建      pad-osk_1.0.1_all.deb（27,620 字节）
+构建      pad-osk_1.0.1_all.deb（29,252 字节）
           在 Ubuntu 24.04 x86_64 虚拟机上用 dpkg-deb 1.22.6 + msgfmt 0.21 构建
-sha256    23385ca469d71286182566dcd2eeb419144f68ea5760e8991007869f8b240115
+sha256    0aed11e186af5862da4f1dfe478a0422052ea71679123c39f04159fec1db6fef
 字段      Package: pad-osk  Version: 1.0.1  Architecture: all
 包内      control.tar.zst + data.tar.zst
 载荷      extension.js / metadata.json / pad-osk / pad-osk.desktop
-          locale/zh_CN/LC_MESSAGES/erhai-osk@local.mo（1,380 字节）
+          locale/zh_CN/LC_MESSAGES/pad-osk@local.mo（1,380 字节）
           extension.js / metadata.json / pad-osk 与工作区 sha256 逐一相同
 权限      脚本 0755，其余 0644（含 .mo）
 翻译      msgunfmt 回读 27 条 msgid，中文 msgstr 完整
@@ -194,7 +194,7 @@ sha256    23385ca469d71286182566dcd2eeb419144f68ea5760e8991007869f8b240115
 
 - `Architecture: all`：包内是纯 JS + shell 脚本 + `.mo` 翻译，arm64 / amd64 通用
 - 构建需要 `dpkg-deb` 和 `msgfmt`（gettext）；`po/*.po` 由 `build-deb.sh` 编译成
-  `locale/<lang>/LC_MESSAGES/erhai-osk@local.mo`
+  `locale/<lang>/LC_MESSAGES/pad-osk@local.mo`
 - 依赖 `gnome-shell (>= 45, << 60)`：扩展用了 GNOME 45+ 的 ESM 扩展 API
   和 `Clutter.VirtualInputDevice`
 - 只在 **GNOME 50.1 / Ubuntu 26.04.1 / arm64** 上实测过

@@ -1,4 +1,4 @@
-// erhai-osk -- on-screen keyboard as a GNOME Shell extension.
+// pad-osk -- on-screen keyboard as a GNOME Shell extension.
 //
 // Why an extension: GNOME/mutter refuses third-party input injection (no
 // zwp_virtual_keyboard, no wlr-layer-shell), and any normal window steals
@@ -412,6 +412,14 @@ const shiftGlyphStyle = (on, scale) =>
     `color: ${on ? THEME.shift[1] : THEME.shift[0]};`
     + ` font-size: ${px(15, scale)};`;
 
+// Emoji cells: no min-width, a square-ish padding and a larger glyph, so a
+// page of 32 fits the panel width at every size step.
+const emojiBtnStyle = scale =>
+    `background-color: ${THEME.key[0]}; color: ${THEME.key[1]};`
+    + ` border-radius: ${pxSoft(radiusSmall(), scale)};`
+    + ` padding: ${px(4, scale)} ${px(8, scale)};`
+    + ` margin: ${px(2, scale)}; font-size: ${px(26, scale)};`;
+
 // ---- key descriptors -------------------------------------------------
 const ch = (base, shifted, minW = 64) => ({base, shifted, minW, kind: 'key'});
 const act = (label, keysym, minW = 82) => ({label, keysym, minW, kind: 'act'});
@@ -420,6 +428,8 @@ const md = (label, name, minW = 82) => ({label, mod: name, minW, kind: 'mod'});
 // source" (xkb:us <-> ibus:libpinyin).  Saved from accidental Super+Space.
 // The label is a msgid: English systems show "IME", Chinese ones "中/英".
 const ime = (minW = 96) => ({label: 'IME', ime: true, minW, kind: 'mod'});
+// Emoji switch: only opens the emoji sheet, it never types anything itself.
+const emj = (minW = 82) => ({label: '😀', emoji: true, minW, kind: 'mod'});
 
 const LAYOUT = [
     [
@@ -451,9 +461,35 @@ const LAYOUT = [
     [
         md('Ctrl', 'ctrl'), md('Alt', 'alt'), md('⊞', 'super'),
         act('␣', XK.space, 340),
+        emj(),
         ime(),
         md('Ctrl', 'ctrl'),
         act('←', XK.Left, 82), act('↓', XK.Down, 82), act('→', XK.Right, 82),
+    ],
+];
+
+// Emoji are shipped as data rather than via the emoji picker/input method:
+// pressing one injects its Unicode keysym directly, which is the only route
+// that works in apps that never speak text-input-v3.
+// 3 pages × 8 columns × 4 rows.
+const EMOJI_PAGES = [
+    [
+        '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+        '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
+        '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
+        '🤪', '🤨', '🧐', '🤓', '😎', '🥳', '😏', '😒',
+    ],
+    [
+        '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫',
+        '😩', '🥺', '😢', '😭', '😤', '😠', '😡', '🤬',
+        '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥',
+        '😓', '🤗', '🤔', '🤭', '🤫', '🤥', '😶', '😐',
+    ],
+    [
+        '👍', '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙',
+        '👈', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️',
+        '🖖', '👋', '🤝', '🙏', '💪', '🦾', '🧠', '👀',
+        '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
     ],
 ];
 
@@ -509,7 +545,7 @@ function makeQsClasses(QS) {
 
 export default class ErhaiOSK extends Extension {
     enable() {
-        log('erhai-osk: v15 enable (settings sheet, themes, sizes, repeat)');
+        log('pad-osk: v15 enable (settings sheet, themes, sizes, repeat)');
         try {
             // Prefer the instance method: it is bound to this extension's uuid
             // and locale/ directory.  The module-level export is only a
@@ -518,12 +554,12 @@ export default class ErhaiOSK extends Extension {
             _gettextFn = typeof this.gettext === 'function'
                 ? this.gettext.bind(this)
                 : _shellGettext;
-            log(`erhai-osk: gettext ${_gettextFn ? 'ok' : 'MISSING'}`
+            log(`pad-osk: gettext ${_gettextFn ? 'ok' : 'MISSING'}`
                 + `, msg Size -> "${T('Size')}"`);
 
             const seat = this._makeSeat();
             if (!seat) {
-                log('erhai-osk: no Clutter seat');
+                log('pad-osk: no Clutter seat');
                 return;
             }
             this._vdev = seat.create_virtual_device(
@@ -610,7 +646,7 @@ export default class ErhaiOSK extends Extension {
             try {
                 GLib.mkdir_with_parents(this._backgroundDir(), 0o755);
             } catch (e) {
-                log(`erhai-osk: background dir failed: ${e}`);
+                log(`pad-osk: background dir failed: ${e}`);
             }
             this._savedConfig = cfg;
 
@@ -642,6 +678,7 @@ export default class ErhaiOSK extends Extension {
 
             this._buildGrip();
             this._buildSettings();
+            this._buildEmoji();
             this._rowsBox = new St.BoxLayout({vertical: true, reactive: false});
             this._buildRows();
             this._box.add_child(this._rowsBox);
@@ -670,11 +707,11 @@ export default class ErhaiOSK extends Extension {
             this._qsToggle = null;
             import('resource:///org/gnome/shell/ui/quickSettings.js')
                 .then(QS => this._addQuickSettings(QS))
-                .catch(e => log(`erhai-osk: quick settings unavailable: ${e}`));
+                .catch(e => log(`pad-osk: quick settings unavailable: ${e}`));
 
-            log('erhai-osk: v15 enabled');
+            log('pad-osk: v15 enabled');
         } catch (e) {
-            log(`erhai-osk: v15 enable failed: ${e}`);
+            log(`pad-osk: v15 enable failed: ${e}`);
         }
     }
 
@@ -683,7 +720,7 @@ export default class ErhaiOSK extends Extension {
             try {
                 this._indicator.destroy();
             } catch (e) {
-                log(`erhai-osk: indicator destroy failed: ${e}`);
+                log(`pad-osk: indicator destroy failed: ${e}`);
             }
             this._indicator = null;
             this._qsToggle = null;
@@ -737,6 +774,12 @@ export default class ErhaiOSK extends Extension {
         this._sectionLabels = [];
         this._settings = null;
         this._settingsBtn = null;
+        this._emojiPanel = null;
+        this._emojiBtns = [];
+        this._emojiPrev = null;
+        this._emojiNext = null;
+        this._emojiPageLabel = null;
+        this._emojiOpen = false;
         this._savedConfig = null;
         this._custom = null;
         this._themes = [...THEMES];
@@ -758,7 +801,7 @@ export default class ErhaiOSK extends Extension {
         this._pickerHidden = false;
         this._repeatCancel();
         this._vdev = null;
-        log('erhai-osk: v15 disabled');
+        log('pad-osk: v15 disabled');
     }
 
     _makeSeat() {
@@ -786,9 +829,9 @@ export default class ErhaiOSK extends Extension {
             this._qsToggle = this._indicator.quickSettingsItems[0];
             Main.panel.statusArea.quickSettings.addExternalIndicator(
                 this._indicator);
-            log('erhai-osk: quick settings toggle added');
+            log('pad-osk: quick settings toggle added');
         } catch (e) {
-            log(`erhai-osk: quick settings toggle failed: ${e}`);
+            log(`pad-osk: quick settings toggle failed: ${e}`);
             if (this._indicator) {
                 try {
                     this._indicator.destroy();
@@ -973,7 +1016,7 @@ export default class ErhaiOSK extends Extension {
                     if (ok)
                         GLib.file_set_contents(to, bytes);
                 } catch (e) {
-                    log(`erhai-osk: migrate ${from} failed: ${e}`);
+                    log(`pad-osk: migrate ${from} failed: ${e}`);
                 }
             };
             for (const name of ['position.kf', 'visible']) {
@@ -995,9 +1038,9 @@ export default class ErhaiOSK extends Extension {
                 }
                 iter.close(null);
             }
-            log('erhai-osk: migrated ~/.config/erhai-osk -> ~/.config/pad-osk');
+            log('pad-osk: migrated ~/.config/erhai-osk -> ~/.config/pad-osk');
         } catch (e) {
-            log(`erhai-osk: config migration failed: ${e}`);
+            log(`pad-osk: config migration failed: ${e}`);
         }
     }
 
@@ -1016,7 +1059,7 @@ export default class ErhaiOSK extends Extension {
         this._pickerTimeoutId = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT, 180000, () => {
                 this._pickerTimeoutId = 0;
-                log('erhai-osk: picker timeout, restoring keyboard');
+                log('pad-osk: picker timeout, restoring keyboard');
                 this._restoreAfterPicker();
                 return GLib.SOURCE_REMOVE;
             });
@@ -1058,7 +1101,7 @@ export default class ErhaiOSK extends Extension {
                     bus.signal_unsubscribe(subId);
                     const [response, results] = params.deep_unpack();
                     if (response !== 0) {
-                        log(`erhai-osk: file chooser closed (${response})`);
+                        log(`pad-osk: file chooser closed (${response})`);
                         this._restoreAfterPicker();
                         return;
                     }
@@ -1093,12 +1136,12 @@ export default class ErhaiOSK extends Extension {
                     try {
                         bus.call_finish(res);
                     } catch (e) {
-                        log(`erhai-osk: portal chooser failed: ${e}, trying zenity`);
+                        log(`pad-osk: portal chooser failed: ${e}, trying zenity`);
                         this._pickBackgroundZenity();
                     }
                 });
         } catch (e) {
-            log(`erhai-osk: portal unavailable: ${e}, trying zenity`);
+            log(`pad-osk: portal unavailable: ${e}, trying zenity`);
             this._pickBackgroundZenity();
         }
     }
@@ -1119,12 +1162,12 @@ export default class ErhaiOSK extends Extension {
                             this._buildBackgroundRow();
                     }
                 } catch (e) {
-                    log(`erhai-osk: zenity picker failed: ${e}`);
+                    log(`pad-osk: zenity picker failed: ${e}`);
                 }
                 this._restoreAfterPicker();
             });
         } catch (e) {
-            log(`erhai-osk: no image picker available: ${e}`);
+            log(`pad-osk: no image picker available: ${e}`);
             this._restoreAfterPicker();
         }
     }
@@ -1156,7 +1199,7 @@ export default class ErhaiOSK extends Extension {
             names.sort();
             return names.map(n => GLib.build_filenamev([dirPath, n]));
         } catch (e) {
-            log(`erhai-osk: background list failed: ${e}`);
+            log(`pad-osk: background list failed: ${e}`);
             return [];
         }
     }
@@ -1166,12 +1209,12 @@ export default class ErhaiOSK extends Extension {
             return null;
         try {
             if (!GLib.file_test(path, GLib.FileTest.EXISTS)) {
-                log(`erhai-osk: background missing: ${path}`);
+                log(`pad-osk: background missing: ${path}`);
                 return null;
             }
             return GLib.filename_to_uri(path, null);
         } catch (e) {
-            log(`erhai-osk: background uri failed: ${e}`);
+            log(`pad-osk: background uri failed: ${e}`);
             return null;
         }
     }
@@ -1370,7 +1413,7 @@ export default class ErhaiOSK extends Extension {
         try {
             Gio.File.new_for_path(path).delete(null);
         } catch (e) {
-            log(`erhai-osk: delete background failed: ${e}`);
+            log(`pad-osk: delete background failed: ${e}`);
             return;
         }
         const wasCurrent = this._background === path;
@@ -1381,7 +1424,7 @@ export default class ErhaiOSK extends Extension {
         }
         this._applyScale();
         this._saveConfig();
-        log(`erhai-osk: deleted background ${path}`
+        log(`pad-osk: deleted background ${path}`
             + (wasCurrent ? ' (was in use, cleared)' : ''));
         if (this._settingsOpen)
             this._buildBackgroundRow();
@@ -1422,7 +1465,7 @@ export default class ErhaiOSK extends Extension {
         this._applyScale();
         this._saveConfig();
         this._updateBackgroundButtons();
-        log(`erhai-osk: background -> ${this._backgroundOn
+        log(`pad-osk: background -> ${this._backgroundOn
             ? this._background : `(off, kept ${this._background ?? 'none'})`}`);
         this._reflow(oldHeight);
     }
@@ -1445,10 +1488,10 @@ export default class ErhaiOSK extends Extension {
             Gio.File.new_for_path(path).copy(
                 Gio.File.new_for_path(dest),
                 Gio.FileCopyFlags.OVERWRITE, null, null);
-            log(`erhai-osk: imported background -> ${dest}`);
+            log(`pad-osk: imported background -> ${dest}`);
             return dest;
         } catch (e) {
-            log(`erhai-osk: background import failed: ${e}`);
+            log(`pad-osk: background import failed: ${e}`);
             return path;                 // use the original location instead
         }
     }
@@ -1492,7 +1535,7 @@ export default class ErhaiOSK extends Extension {
         BACKGROUND_URI = null;
         this._applyScale();
         this._saveConfig();
-        log('erhai-osk: reset to defaults');
+        log('pad-osk: reset to defaults');
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             if (this._box && this._placed) {
                 this._placeDefault();
@@ -1521,12 +1564,157 @@ export default class ErhaiOSK extends Extension {
             return;
         }
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        // Only one sheet at a time: opening settings puts emoji away.
+        this._closeEmoji(false);
         // Re-scan the backgrounds folder on every open: dropping a new image in
         // must not require a re-login.
         this._buildBackgroundRow();
         this._settingsOpen = true;
         this._settings.visible = true;
         this._reflow(oldHeight);
+    }
+
+    // ---- emoji layer --------------------------------------------------
+    // Not a popup and not a separate card: pressing 😀 swaps the four letter
+    // rows for the emoji grid, keeping the panel's width and the bottom row
+    // (space / enter / 😀 again to come back).  The grid is laid out like keys,
+    // one row per line, so it reads as another keyboard layer.
+    _buildEmoji() {
+        this._emojiPage = 0;
+        this._emojiOpen = false;
+        this._emojiBtns = [];
+        this._emojiPanel = new St.BoxLayout({
+            vertical: true,
+            reactive: true,
+            visible: false,
+            x_expand: true,
+            style: settingsPanelStyle(this._scale),
+        });
+        this._box.add_child(this._emojiPanel);
+        this._fillEmojiPage();
+    }
+
+    _fillEmojiPage() {
+        if (!this._emojiPanel)
+            return;
+        this._emojiPanel.destroy_all_children();
+        this._emojiBtns = [];
+        const page = EMOJI_PAGES[this._emojiPage] ?? [];
+        for (let i = 0; i < page.length; i += 8) {
+            const row = new St.BoxLayout({
+                reactive: false,
+                x_expand: true,
+                x_align: Clutter.ActorAlign.FILL,
+            });
+            for (const glyph of page.slice(i, i + 8)) {
+                const btn = new St.Button({
+                    child: new St.Label({
+                        text: glyph,
+                        x_align: Clutter.ActorAlign.CENTER,
+                        y_align: Clutter.ActorAlign.CENTER,
+                    }),
+                    style: emojiBtnStyle(this._scale),
+                    reactive: true,
+                    x_expand: true,
+                    can_focus: false,
+                    track_hover: true,
+                });
+                btn.connect('clicked', () => this._emitEmoji(glyph));
+                row.add_child(btn);
+                this._emojiBtns.push(btn);
+            }
+            this._emojiPanel.add_child(row);
+        }
+
+        // Pager: ‹ 1/3 ›
+        const pager = new St.BoxLayout({
+            reactive: false,
+            x_align: Clutter.ActorAlign.CENTER,
+        });
+        this._emojiPrev = new St.Button({
+            child: new St.Label({text: '‹', y_align: Clutter.ActorAlign.CENTER}),
+            style: gripBtnStyle(this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._emojiPrev.connect('clicked', () => this._setEmojiPage(-1));
+        pager.add_child(this._emojiPrev);
+        this._emojiPageLabel = new St.Label({
+            text: `${this._emojiPage + 1}/${EMOJI_PAGES.length}`,
+            y_align: Clutter.ActorAlign.CENTER,
+            style: sectionLabelStyle(this._scale),
+        });
+        pager.add_child(this._emojiPageLabel);
+        this._emojiNext = new St.Button({
+            child: new St.Label({text: '›', y_align: Clutter.ActorAlign.CENTER}),
+            style: gripBtnStyle(this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._emojiNext.connect('clicked', () => this._setEmojiPage(1));
+        pager.add_child(this._emojiNext);
+        this._emojiPanel.add_child(pager);
+    }
+
+    _toggleEmoji() {
+        if (!this._emojiPanel)
+            return;
+        if (this._emojiOpen) {
+            this._closeEmoji();
+            return;
+        }
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._closeSettings(false);
+        this._fillEmojiPage();
+        this._setEmojiLayer(true);
+        this._reflow(oldHeight);
+    }
+
+    _closeEmoji(reflow = true) {
+        if (!this._emojiPanel || !this._emojiOpen)
+            return;
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._setEmojiLayer(false);
+        if (reflow)
+            this._reflow(oldHeight);
+    }
+
+    // The emoji grid takes the place of the four letter rows; the bottom row
+    // stays visible so space, enter and the 😀 key itself remain reachable.
+    _setEmojiLayer(show) {
+        const rows = this._rowWidgets ?? [];
+        const keep = rows.length > 1 ? rows[rows.length - 1] : null;
+        for (const row of rows)
+            row.visible = !show || row === keep;
+        if (this._emojiPanel)
+            this._emojiPanel.visible = show;
+        this._emojiOpen = show;
+    }
+
+    _setEmojiPage(delta) {
+        const count = EMOJI_PAGES.length;
+        this._emojiPage = (this._emojiPage + delta + count) % count;
+        this._fillEmojiPage();
+    }
+
+    _emitEmoji(glyph) {
+        if (!this._vdev)
+            return;
+        const code = glyph.codePointAt(0);
+        const keysym = Clutter.unicode_to_keysym(code);
+        if (!keysym)
+            return;
+        const t = Clutter.get_current_event_time();
+        this._vdev.notify_keyval(t, keysym, Clutter.KeyState.PRESSED);
+        this._vdev.notify_keyval(t, keysym, Clutter.KeyState.RELEASED);
+        // An emoji must never arrive as Ctrl/Alt/Super+something.
+        this._mods = {ctrl: false, alt: false, super: false};
+        this._shift = false;
+        this._updateVisuals();
+        log(`pad-osk: emoji U+${code.toString(16).toUpperCase()}`
+            + ` (keysym 0x${keysym.toString(16)})`);
     }
 
     // Collapsing the panel or hiding the keyboard both put the sheet away, so a
@@ -1557,7 +1745,7 @@ export default class ErhaiOSK extends Extension {
         this._themeName = name;
         this._applyScale();
         this._saveConfig();
-        log(`erhai-osk: theme -> ${name}`);
+        log(`pad-osk: theme -> ${name}`);
         this._reflow(oldHeight);
     }
 
@@ -1581,7 +1769,7 @@ export default class ErhaiOSK extends Extension {
         this._scale = step.scale;
         this._applyScale();
         this._saveConfig();
-        log(`erhai-osk: size -> ${name} (scale ${this._scale})`);
+        log(`pad-osk: size -> ${name} (scale ${this._scale})`);
 
         // Keep the bottom edge where it is: the panel grows upward instead of
         // pushing itself off the bottom of the screen.
@@ -1601,7 +1789,7 @@ export default class ErhaiOSK extends Extension {
         OPACITY = clamped;
         this._applyScale();
         this._saveConfig();
-        log(`erhai-osk: opacity -> ${Math.round(clamped * 100)}%`);
+        log(`pad-osk: opacity -> ${Math.round(clamped * 100)}%`);
         this._reflow(oldHeight);
     }
 
@@ -1636,7 +1824,7 @@ export default class ErhaiOSK extends Extension {
             // screenshot: percentage of the monitor width is what we tune for.
             const mon = Main.layoutManager.primaryMonitor;
             const pct = mon ? Math.round(width / mon.width * 100) : 0;
-            log(`erhai-osk: panel ${width}x${newHeight} `
+            log(`pad-osk: panel ${width}x${newHeight} `
                 + `(${pct}% of ${mon ? mon.width : 0}px, step ${this._sizeName} `
                 + `scale ${this._scale})`);
             return GLib.SOURCE_REMOVE;
@@ -1679,6 +1867,11 @@ export default class ErhaiOSK extends Extension {
         this._styleIfAlive(this._pickBtn, sizeBtnStyle(false, s));
         this._styleIfAlive(this._manageBtn, sizeBtnStyle(false, s));
         this._updateBackgroundButtons();
+        for (const btn of this._emojiBtns ?? [])
+            this._styleIfAlive(btn, emojiBtnStyle(s));
+        this._styleIfAlive(this._emojiPrev, gripBtnStyle(s));
+        this._styleIfAlive(this._emojiNext, gripBtnStyle(s));
+        this._styleIfAlive(this._emojiPageLabel, sectionLabelStyle(s));
     }
 
     // A button kept in a member can be destroyed by a row rebuild; touching a
@@ -1689,7 +1882,7 @@ export default class ErhaiOSK extends Extension {
             if (actor)
                 actor.style = css;
         } catch (e) {
-            log(`erhai-osk: restyle skipped (${e.message ?? e})`);
+            log(`pad-osk: restyle skipped (${e.message ?? e})`);
         }
     }
 
@@ -1733,7 +1926,7 @@ export default class ErhaiOSK extends Extension {
         RADIUS = clamped;
         this._applyScale();
         this._saveConfig();
-        log(`erhai-osk: radius -> ${clamped}`);
+        log(`pad-osk: radius -> ${clamped}`);
         this._reflow(oldHeight);
     }
 
@@ -1748,6 +1941,7 @@ export default class ErhaiOSK extends Extension {
 
     // ---- key rows ----------------------------------------------------
     _buildRows() {
+        this._rowWidgets = [];
         for (const row of LAYOUT) {
             const r = new St.BoxLayout({
                 reactive: false,
@@ -1756,6 +1950,7 @@ export default class ErhaiOSK extends Extension {
             for (const def of row)
                 r.add_child(this._key(def));
             this._rowsBox.add_child(r);
+            this._rowWidgets.push(r);
         }
     }
 
@@ -1828,7 +2023,9 @@ export default class ErhaiOSK extends Extension {
             btn, kind: def.kind, minW: def.minW, mod: def.mod ?? null,
         });
 
-        if (def.ime) {
+        if (def.emoji) {
+            btn.connect('clicked', () => this._toggleEmoji());
+        } else if (def.ime) {
             btn.connect('clicked', () => this._toggleIme());
         } else if (def.mod) {
             this._modButtons.push({name: def.mod, btn, minW: def.minW});
@@ -2006,9 +2203,11 @@ export default class ErhaiOSK extends Extension {
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         const show = !this._rowsBox.visible;
         this._rowsBox.visible = show;
-        // Collapsing to the thin bar must not leave the settings sheet behind.
-        if (!show)
+        // Collapsing to the thin bar must not leave a sheet behind.
+        if (!show) {
             this._closeSettings(false);
+            this._closeEmoji(false);
+        }
         if (this._collapseBtn) {
             const label = this._collapseBtn.get_child();
             if (label)
@@ -2022,6 +2221,7 @@ export default class ErhaiOSK extends Extension {
         if (!visible) {
             this._repeatCancel();
             this._closeSettings(false);
+            this._closeEmoji(false);
         }
         this._hidden = !visible;
         if (this._box)
@@ -2071,7 +2271,7 @@ export default class ErhaiOSK extends Extension {
             if (text === '0')
                 return false;
         } catch (e) {
-            log(`erhai-osk: read state failed: ${e}`);
+            log(`pad-osk: read state failed: ${e}`);
         }
         return null;
     }
@@ -2082,7 +2282,7 @@ export default class ErhaiOSK extends Extension {
             GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o755);
             GLib.file_set_contents(path, visible ? '1' : '0');
         } catch (e) {
-            log(`erhai-osk: write state failed: ${e}`);
+            log(`pad-osk: write state failed: ${e}`);
         }
     }
 
@@ -2101,7 +2301,7 @@ export default class ErhaiOSK extends Extension {
             this._stateMonitorId = this._stateMonitor.connect('changed',
                 () => this._onStateFileChanged());
         } catch (e) {
-            log(`erhai-osk: state watch failed: ${e}`);
+            log(`pad-osk: state watch failed: ${e}`);
         }
     }
 
@@ -2129,7 +2329,7 @@ export default class ErhaiOSK extends Extension {
             this._modalTick();
             return GLib.SOURCE_CONTINUE;
         });
-        log('erhai-osk: modal watcher started');
+        log('pad-osk: modal watcher started');
     }
 
     _isModalDialogVisible() {
@@ -2148,12 +2348,12 @@ export default class ErhaiOSK extends Extension {
         if (modal && !this._hidden) {
             this._hiddenByModal = true;
             this._setVisible(false, false);   // don't rewrite the state file
-            log('erhai-osk: modal dialog opened, keyboard yielded');
+            log('pad-osk: modal dialog opened, keyboard yielded');
         } else if (!modal && this._hiddenByModal) {
             this._hiddenByModal = false;
             if (this._readState() !== false) {
                 this._setVisible(true, false);
-                log('erhai-osk: modal dialog closed, keyboard restored');
+                log('pad-osk: modal dialog closed, keyboard restored');
             }
         }
     }
@@ -2176,7 +2376,7 @@ export default class ErhaiOSK extends Extension {
             this._applyPosition(saved.x, saved.y);
         else
             this._placeDefault();
-        log(`erhai-osk: placed at ${this._posX},${this._posY} size ${w}x${h}`);
+        log(`pad-osk: placed at ${this._posX},${this._posY} size ${w}x${h}`);
     }
 
     _placeDefault() {
@@ -2224,7 +2424,7 @@ export default class ErhaiOSK extends Extension {
         this._dragTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 5000,
             () => {
                 this._dragTimeoutId = 0;
-                log('erhai-osk: drag timeout, releasing grab');
+                log('pad-osk: drag timeout, releasing grab');
                 this._endDrag();
                 return GLib.SOURCE_REMOVE;
             });
@@ -2335,7 +2535,7 @@ export default class ErhaiOSK extends Extension {
                 scale_large: num('scale_large'),
             };
         } catch (e) {
-            log(`erhai-osk: load config failed: ${e}`);
+            log(`pad-osk: load config failed: ${e}`);
         }
         return null;
     }
@@ -2392,7 +2592,7 @@ export default class ErhaiOSK extends Extension {
                 scale_large: prev ? prev.scale_large : null,
             };
         } catch (e) {
-            log(`erhai-osk: save config failed: ${e}`);
+            log(`pad-osk: save config failed: ${e}`);
         }
     }
 

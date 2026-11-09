@@ -8,8 +8,13 @@
 # before.  Move it aside (do not delete: the user may want it back).
 set -e
 
-UUID=erhai-osk@local
+UUID=pad-osk@local
+OLD_UUID=erhai-osk@local
 PKG_VERSION=@VERSION@
+
+# The extension was renamed from erhai-osk@local in 1.0.1.  Remove the old
+# system-wide copy so the shell cannot load two versions of it.
+rm -rf /usr/share/gnome-shell/extensions/$OLD_UUID
 
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
     RU_UID=$(id -u "$SUDO_USER" 2>/dev/null || true)
@@ -37,8 +42,12 @@ fi
 
 # Best effort: enable it in the session that ran the install.
 if [ -n "${RU_UID:-}" ] && [ -d "/run/user/$RU_UID" ]; then
+    # gnome-extensions talks to the session bus; without an explicit address it
+    # silently does nothing when run from an apt postinst.
     su -s /bin/sh "$SUDO_USER" -c \
-        "XDG_RUNTIME_DIR=/run/user/$RU_UID gnome-extensions enable $UUID" \
+        "XDG_RUNTIME_DIR=/run/user/$RU_UID \
+         DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$RU_UID/bus \
+         gnome-extensions enable $UUID" \
         >/dev/null 2>&1 || true
 fi
 

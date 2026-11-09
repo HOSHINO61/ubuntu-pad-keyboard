@@ -20,14 +20,14 @@ DEB="$DIST/${PKG}_${VER}_${ARCH}.deb"
 echo "=== staging $PKG $VER ==="
 rm -rf "$STAGE/usr" "$DIST"
 mkdir -p \
-    "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local" \
+    "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local" \
     "$STAGE/usr/bin" \
     "$STAGE/usr/share/applications" \
     "$DIST"
 
-cp "$ROOT/scripts/erhai-osk-ext/extension.js" \
-   "$ROOT/scripts/erhai-osk-ext/metadata.json" \
-   "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/"
+cp "$ROOT/scripts/pad-osk-ext/extension.js" \
+   "$ROOT/scripts/pad-osk-ext/metadata.json" \
+   "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/"
 
 cp "$ROOT/scripts/pad-osk-toggle.sh" \
    "$STAGE/usr/bin/pad-osk"
@@ -38,7 +38,7 @@ cp "$ROOT/scripts/pad-osk.desktop" \
 # Translations: compile po/<lang>.po into
 # usr/share/gnome-shell/extensions/<uuid>/locale/<lang>/LC_MESSAGES/<uuid>.mo,
 # which is where the extension's bindtextdomain() looks.  Needs msgfmt (gettext).
-EXT_LOCALE="$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/locale"
+EXT_LOCALE="$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/locale"
 if [ -d "$ROOT/po" ]; then
     command -v msgfmt >/dev/null 2>&1 || {
         echo "error: msgfmt not found (install gettext)" >&2
@@ -49,7 +49,7 @@ if [ -d "$ROOT/po" ]; then
         [ -e "$po" ] || continue
         lang=$(basename "$po" .po)
         mkdir -p "$EXT_LOCALE/$lang/LC_MESSAGES"
-        msgfmt --check -o "$EXT_LOCALE/$lang/LC_MESSAGES/erhai-osk@local.mo" "$po"
+        msgfmt --check -o "$EXT_LOCALE/$lang/LC_MESSAGES/pad-osk@local.mo" "$po"
         echo "locale: $lang"
     done
 fi
@@ -61,9 +61,9 @@ chmod 755 "$STAGE/DEBIAN"
 chmod 755 "$STAGE/usr/bin/pad-osk"
 chmod 755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/postrm"
 chmod 644 "$STAGE/usr/share/applications/pad-osk.desktop"
-chmod 644 "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/"*.js \
-          "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/"*.json
-find "$STAGE/usr/share/gnome-shell/extensions/erhai-osk@local/locale" \
+chmod 644 "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/"*.js \
+          "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/"*.json
+find "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/locale" \
      -name '*.mo' -exec chmod 644 {} + 2>/dev/null || true
 
 echo "=== tree ==="

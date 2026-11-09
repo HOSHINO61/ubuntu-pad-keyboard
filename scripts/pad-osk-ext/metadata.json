@@ -1,9 +1,9 @@
 {
-  "uuid": "erhai-osk@local",
+  "uuid": "pad-osk@local",
   "name": "PAD-OSK",
   "description": "On-screen keyboard that injects keys via Clutter.VirtualInputDevice, so it works with Electron/Chromium apps (QQ, Chrome) that never speak text-input-v3. Lives inside the shell, so it never steals keyboard focus. A settings sheet behind the ⚙ button picks three key sizes, four palettes (graphite/light/warm/contrast) plus a user-defined palette, a background transparency from 100% down to 50%, a backdrop image, and a one-tap reset to defaults.",
   "shell-version": [
     "50"
   ],
-  "version": 8
+  "version": 10
 }

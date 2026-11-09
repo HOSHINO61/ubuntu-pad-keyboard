@@ -132,7 +132,7 @@ Ctrl  Alt  ⊞        [     空格     ]   中/英  Ctrl  ← ↓ →
 每次切换尺寸，扩展会往 journal 里记一行，方便核对：
 
 ```
-erhai-osk: panel 1120x421 (66% of 1696px, step medium scale 0.85)
+pad-osk: panel 1120x421 (66% of 1696px, step medium scale 0.85)
 ```
 切换时**就地重排、不重建按键**（重建会让正在按下的触摸落到别的键上，产生杂字符），
 底边保持不动，所以键盘向上生长、不会跑出屏幕。尺寸与位置一起存在
@@ -293,7 +293,7 @@ background=/home/user/图片/星空.webp
 ## 界面语言
 
 界面跟随系统语言：源码里的字符串是**英文**（msgid），`po/zh_CN.po` 提供简体中文，
-打包时 `msgfmt` 编译成 `locale/zh_CN/LC_MESSAGES/erhai-osk@local.mo` 一起装上。
+打包时 `msgfmt` 编译成 `locale/zh_CN/LC_MESSAGES/pad-osk@local.mo` 一起装上。
 系统语言是中文就显示中文，否则显示英文源文。
 
 加别的语言：复制一份 `po/zh_CN.po` 成 `po/<lang>.po`，翻译 `msgstr` 后重新打包即可，
@@ -320,6 +320,10 @@ sudo apt remove pad-osk
 ```
 
 用户配置 `~/.config/pad-osk/`（位置、开关状态、尺寸、配色）会保留。
+
+> **从 1.0 升级**：扩展的 uuid 从 `erhai-osk@local` 改名成 `pad-osk@local`，
+> 包会自动删掉旧目录并在安装会话里启用新扩展。万一没启用，敲一次
+> `gnome-extensions enable pad-osk@local`（或点一下应用抽屉里的 PAD-OSK 图标）即可。
 
 
 ### 从源码构建
@@ -364,7 +368,7 @@ packaging/
   README.md                  打包说明（构建、命名、已知限制）
   pad-osk/DEBIAN/   control / postinst / postrm
 scripts/
-  erhai-osk-ext/             扩展源码
+  pad-osk-ext/             扩展源码
     extension.js
     metadata.json
   pad-osk-toggle.sh 应用图标调用的开关脚本

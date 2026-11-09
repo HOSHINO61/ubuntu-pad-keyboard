@@ -1,7 +1,7 @@
 #!/bin/sh
 # Post-remove: refresh the desktop cache.
 #
-# Deliberately does NOT touch ~/.config/erhai-osk (keyboard position and on/off
+# Deliberately does NOT touch ~/.config/pad-osk (keyboard position and on/off
 # state): that is user data and reinstalling should keep it.  Neither does it
 # edit any user's enabled-extensions list -- the shell simply ignores a uuid
 # whose directory is gone.

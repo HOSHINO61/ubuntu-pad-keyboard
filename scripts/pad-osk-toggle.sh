@@ -9,7 +9,7 @@
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/1000}"
 export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/1000/bus}"
 
-UUID=erhai-osk@local
+UUID=pad-osk@local
 CFG="${XDG_CONFIG_HOME:-$HOME/.config}/pad-osk"
 STATE="$CFG/visible"
 
