@@ -315,6 +315,10 @@ const CHIP_GAP_PX = 4;
 const PICK_W = PALETTE_COLS * (CHIP_PX + CHIP_GAP_PX);
 const SPECTRUM_H = 170;
 const VALUE_H = 20;
+// The bar is painted below a transparent strip, because the gap between the
+// spectrum and the bar is inside the actor: no box spacing, no CSS margin, no
+// layout property that might not exist -- the DrawingArea's height carries it.
+const VALUE_GAP_PX = 4;
 
 // ---- HSV picker, Windows 11 shape ------------------------------------
 // Square: hue across, saturation downwards at full brightness -- the same
@@ -421,24 +425,29 @@ const paintSpectrum = (area, hsv) => {
 const paintValueBar = (area, hsv) => {
     const cr = area.get_context();
     const [width, height] = area.get_surface_size();
-    if (width > 0 && height > 0) {
+    // The top VALUE_GAP_PX of the actor is left unpainted, so the bar reads as
+    // a separate control under the spectrum.
+    const gap = Math.round(height * VALUE_GAP_PX / (VALUE_H + VALUE_GAP_PX));
+    const barHeight = height - gap;
+    if (width > 0 && barHeight > 1) {
         const [r, g, b] = hsvToRgb255(hsv.h, hsv.s, 1).map(c => c / 255);
         const grad = cr.createLinearGradient(0, 0, width, 0);
         grad.addColorStopRGB(0, 0, 0, 0);
         grad.addColorStopRGB(1, r, g, b);
         cr.setSource(grad);
-        cr.rectangle(0, 0, width, height);
+        cr.rectangle(0, gap, width, barHeight);
         cr.fill();
 
         const x = Math.max(0, Math.min(1, hsv.v)) * width;
-        const radius = Math.max(3, Math.round(height * 0.42));
+        const radius = Math.max(3, Math.round(barHeight * 0.42));
+        const cy = gap + barHeight / 2;
         cr.setLineWidth(3);
         cr.setSourceRGBA(0, 0, 0, 0.55);
-        cr.arc(x, height / 2, radius, 0, 2 * Math.PI);
+        cr.arc(x, cy, radius, 0, 2 * Math.PI);
         cr.stroke();
         cr.setLineWidth(2);
         cr.setSourceRGBA(1, 1, 1, 0.95);
-        cr.arc(x, height / 2, radius, 0, 2 * Math.PI);
+        cr.arc(x, cy, radius, 0, 2 * Math.PI);
         cr.stroke();
     }
     cr.$dispose();
@@ -1273,7 +1282,6 @@ export default class ErhaiOSK extends Extension {
         this._customBox = new St.BoxLayout({
             vertical: true,
             reactive: false,
-            spacing: 4,
             x_expand: false,
             x_align: Clutter.ActorAlign.START,
             visible: this._themeName === CUSTOM_THEME,
@@ -2531,7 +2539,7 @@ export default class ErhaiOSK extends Extension {
             this._valueBar.set_width(
                 Math.max(120, Math.round(PICK_W * scale)));
             this._valueBar.set_height(
-                Math.max(10, Math.round(VALUE_H * scale)));
+                Math.max(12, Math.round((VALUE_H + VALUE_GAP_PX) * scale)));
             this._valueBar.queue_repaint();
         }
         for (const item of this._hexKeys ?? [])
