@@ -2681,6 +2681,7 @@ export default class ErhaiOSK extends Extension {
             return;
         this._fitBest = null;
         this._fitDone = false;
+        this._fitTries = 0;
 
         const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._sizeName = name;
@@ -2785,6 +2786,32 @@ export default class ErhaiOSK extends Extension {
         if (!best || err < best.err) {
             this._fitBest = {width, scale: this._scale, err};
         } else {
+            // Both ends of the correction have now been measured and neither
+            // is inside the tolerance: the reachable widths jump over the
+            // target because whole-pixel key widths round.  The scale ratio
+            // that produced these two is linear, but the curve is not -- the
+            // width that lands closest can sit between them (2558: 1.07 gives
+            // 54%, 1.09 gives 56%, 1.08 gives 55%).  Probe the midpoint once
+            // before settling for the better of the two.
+            const gap = Math.abs(this._scale - best.scale);
+            const tries = this._fitTries || 0;
+            if (gap >= 0.02 && tries < 2) {
+                const probe = clampScale((this._scale + best.scale) / 2);
+                const distinct = Math.abs(probe - this._scale) >= 0.01
+                    && Math.abs(probe - best.scale) >= 0.01;
+                if (distinct) {
+                    const [, probeOldHeight] = this._box
+                        ? this._box.get_size() : [0, 0];
+                    this._fitTries = tries + 1;
+                    const from = this._scale;
+                    this._scale = probe;
+                    this._applyScale();
+                    log(`pad-osk: fit probe ${probe} `
+                        + `(between ${best.scale} and ${from})`);
+                    this._reflow(probeOldHeight);
+                    return;
+                }
+            }
             if (best.scale !== this._scale) {
                 this._scale = best.scale;
                 this._applyScale();
@@ -3500,6 +3527,7 @@ export default class ErhaiOSK extends Extension {
             return;
         this._fitBest = null;
         this._fitDone = false;
+        this._fitTries = 0;
         const step = findStep(this._steps, this._sizeName);
         if (step) {
             const seed = clampScale(scaleForStep(step));
