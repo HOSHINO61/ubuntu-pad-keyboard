@@ -76,6 +76,9 @@ msgstr "确认删"
 msgid "Cancel"
 msgstr "取消"
 
+msgid "Done"
+msgstr "完成"
+
 msgid "Reset to defaults"
 msgstr "恢复默认"
 
@@ -117,3 +120,9 @@ msgstr "按键"
 
 msgid "Accent"
 msgstr "强调"
+
+msgid "More"
+msgstr "更多"
+
+msgid "Less"
+msgstr "收起"

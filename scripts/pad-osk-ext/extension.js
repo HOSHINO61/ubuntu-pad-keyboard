@@ -268,42 +268,23 @@ function makeCustomTheme(source) {
     };
 }
 
-// 自定义配色: the swatches offered per role.  Only the background of each role
-// is chosen here -- the glyph colour is derived from its luminance by
-// makeCustomTheme(), so a light swatch never keeps white text.
-// Each row is a different kind of colour, so the roles stay distinguishable
-// instead of turning into five rows of the same grey:
-//   panel  darkest neutrals (and two paper tones for a light keyboard)
-//   key    neutrals one step lighter than the panel
-//   mod    muted colour, keys that carry a label
-//   act    the muted colour's darker sibling
-//   on     vivid accents
+// 自定义配色: the five roles the picker edits.  Only the background of each role
+// is chosen -- the glyph colour is derived from its luminance by
+// makeCustomTheme(), so a light palette never keeps white text and the user
+// never has to spell out both halves of every [bg, fg] pair.
+// The roles stay distinguishable because they are separate keys, not because
+// they are preset swatches:
+//   panel  the sheet behind the keys
+//   key    letter and number keys
+//   mod    modifiers, keys that carry a label
+//   act    the modifiers' darker sibling (Enter, Backspace, arrows)
+//   on     the live accent (shift, armed modifiers)
 const CUSTOM_ROLES = [
-    {
-        key: 'panel', label: 'Panel',
-        colors: ['#0f1115', '#1b2026', '#2b3340', '#3a2f28',
-            '#1a2635', '#2c1f2e', '#f7f4ee', '#ffffff'],
-    },
-    {
-        key: 'key', label: 'Keys',
-        colors: ['#3a4048', '#4a525c', '#33393f', '#4a3f33',
-            '#3c4c5e', '#4d3b4a', '#e9e3d7', '#dbe0e6'],
-    },
-    {
-        key: 'mod', label: 'Modifiers',
-        colors: ['#2f6f9e', '#3f7f63', '#7f6b3f', '#8f5a4a',
-            '#5a5f8f', '#6f4f7f', '#cfc7b8', '#b9c0c8'],
-    },
-    {
-        key: 'act', label: 'Actions',
-        colors: ['#27566f', '#2f5f4a', '#5f5030', '#6b4438',
-            '#454a6b', '#543c5f', '#b8b0a2', '#9aa1a8'],
-    },
-    {
-        key: 'on', label: 'Accent',
-        colors: ['#7cc4ff', '#ffd479', '#8fe3a1', '#ff9db0',
-            '#c7a3ff', '#ff9f68', '#6ee7d7', '#f2f2f2'],
-    },
+    {key: 'panel', label: 'Panel'},
+    {key: 'key', label: 'Keys'},
+    {key: 'mod', label: 'Modifiers'},
+    {key: 'act', label: 'Actions'},
+    {key: 'on', label: 'Accent'},
 ];
 const CUSTOM_DEFAULT = {
     panel: '#1b2026',
@@ -312,6 +293,182 @@ const CUSTOM_DEFAULT = {
     act: '#434c56',
     on: '#7cc4ff',
 };
+
+// ---- 调色板 ----------------------------------------------------------
+// One shared set of 24, not five role-specific rows: the same navy is the same
+// navy whether it is wanted for the panel or for a key, and one grid keeps the
+// editor to two lines instead of five.  Two rows of twelve line up with the
+// spectrum below them (see PICK_W).
+const PALETTE = [
+    // neutrals, darkest to paper
+    '#0f1115', '#1b2026', '#2b3340', '#3a4048', '#4a525c', '#5d6670',
+    '#8a929c', '#b9c0c8', '#e9e3d7', '#f5f2ec', '#ffffff', '#000000',
+    // colours: cool, green, warm, accent
+    '#7cc4ff', '#2f6f9e', '#27566f', '#3f7f63', '#2f5f4a', '#8fe3a1',
+    '#ffd479', '#ff9f68', '#8f5a4a', '#ff9db0', '#c7a3ff', '#6ee7d7',
+];
+const PALETTE_COLS = 12;
+const CHIP_PX = 30;
+const CHIP_GAP_PX = 4;
+// Width of the picker block: twelve chips wide, so the spectrum, the brightness
+// bar and the palette share one straight edge.
+const PICK_W = PALETTE_COLS * (CHIP_PX + CHIP_GAP_PX);
+const SPECTRUM_H = 170;
+const VALUE_H = 20;
+
+// ---- HSV picker, Windows 11 shape ------------------------------------
+// Square: hue across, saturation downwards at full brightness -- the same
+// orientation as the picker this keyboard copies.  St has no colour dialog and
+// no gradient painter, so both areas are drawn with Cairo into St.DrawingArea.
+// The picker only ever produces a hex string, which then goes through the same
+// makeCustomTheme() path the config file does.
+const hsvToRgb255 = (h, s, v) => {
+    const hue = ((h % 360) + 360) % 360;
+    const c = v * s;
+    const hp = hue / 60;
+    const x = c * (1 - Math.abs(hp % 2 - 1));
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    if (hp < 1) {
+        r = c; g = x;
+    } else if (hp < 2) {
+        r = x; g = c;
+    } else if (hp < 3) {
+        g = c; b = x;
+    } else if (hp < 4) {
+        g = x; b = c;
+    } else if (hp < 5) {
+        r = x; b = c;
+    } else {
+        r = c; b = x;
+    }
+    const m = v - c;
+    return [r + m, g + m, b + m].map(channel => Math.round(channel * 255));
+};
+
+const hsvToHex = (h, s, v) => rgbToHex(hsvToRgb255(h, s, v));
+
+const hexToHsv = hex => {
+    const rgb = hexToRgb(hex);
+    if (!rgb)
+        return {h: 0, s: 0, v: 0};
+    const [r, g, b] = rgb.map(channel => channel / 255);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+    let h = 0;
+    if (delta > 0) {
+        if (max === r)
+            h = 60 * (((g - b) / delta) % 6);
+        else if (max === g)
+            h = 60 * ((b - r) / delta + 2);
+        else
+            h = 60 * ((r - g) / delta + 4);
+    }
+    if (h < 0)
+        h += 360;
+    return {h, s: max === 0 ? 0 : delta / max, v: max};
+};
+
+// A ring at the picked point, black under white so it reads on both ends of the
+// square -- without it there is no way to tell which colour is current.
+const paintRing = (cr, x, y, radius) => {
+    cr.setLineWidth(3);
+    cr.setSourceRGBA(0, 0, 0, 0.55);
+    cr.arc(x, y, radius, 0, 2 * Math.PI);
+    cr.stroke();
+    cr.setLineWidth(1.5);
+    cr.setSourceRGBA(1, 1, 1, 0.95);
+    cr.arc(x, y, radius, 0, 2 * Math.PI);
+    cr.stroke();
+};
+
+// Hue across, white fading in downwards: full hue on the top edge, paper on the
+// bottom one.  Blending towards white in alpha is exactly "drop the saturation"
+// in sRGB, so two gradients are enough -- no per-pixel loop.
+const paintSpectrum = (area, hsv) => {
+    const cr = area.get_context();
+    const [width, height] = area.get_surface_size();
+    if (width > 0 && height > 0) {
+        const across = cr.createLinearGradient(0, 0, width, 0);
+        for (let i = 0; i <= 6; i++) {
+            const [r, g, b] = hsvToRgb255(i * 60, 1, 1).map(c => c / 255);
+            across.addColorStopRGB(i / 6, r, g, b);
+        }
+        cr.setSource(across);
+        cr.rectangle(0, 0, width, height);
+        cr.fill();
+
+        const down = cr.createLinearGradient(0, 0, 0, height);
+        down.addColorStopRGBA(0, 1, 1, 1, 0);
+        down.addColorStopRGBA(1, 1, 1, 1, 1);
+        cr.setSource(down);
+        cr.rectangle(0, 0, width, height);
+        cr.fill();
+
+        const radius = Math.max(4, Math.round(Math.min(width, height) / 12));
+        paintRing(cr,
+            ((((hsv.h % 360) + 360) % 360) / 360) * width,
+            (1 - Math.max(0, Math.min(1, hsv.s))) * height, radius);
+    }
+    cr.$dispose();
+};
+
+// Brightness: black on the left, this hue at full brightness on the right.
+// Windows 11 keeps a second vertical strip for the same number; two controls for
+// one value is one too many, so only the bar under the square is kept.
+const paintValueBar = (area, hsv) => {
+    const cr = area.get_context();
+    const [width, height] = area.get_surface_size();
+    if (width > 0 && height > 0) {
+        const [r, g, b] = hsvToRgb255(hsv.h, hsv.s, 1).map(c => c / 255);
+        const grad = cr.createLinearGradient(0, 0, width, 0);
+        grad.addColorStopRGB(0, 0, 0, 0);
+        grad.addColorStopRGB(1, r, g, b);
+        cr.setSource(grad);
+        cr.rectangle(0, 0, width, height);
+        cr.fill();
+
+        const x = Math.max(0, Math.min(1, hsv.v)) * width;
+        const radius = Math.max(3, Math.round(height * 0.42));
+        cr.setLineWidth(3);
+        cr.setSourceRGBA(0, 0, 0, 0.55);
+        cr.arc(x, height / 2, radius, 0, 2 * Math.PI);
+        cr.stroke();
+        cr.setLineWidth(2);
+        cr.setSourceRGBA(1, 1, 1, 0.95);
+        cr.arc(x, height / 2, radius, 0, 2 * Math.PI);
+        cr.stroke();
+    }
+    cr.$dispose();
+};
+
+// A 调色板 chip: the colour itself, outlined with the theme accent while the
+// current role already holds it.
+const paletteChipStyle = (color, active, scale) => {
+    const size = Math.max(16, Math.round(CHIP_PX * scale));
+    return `background-color: ${color};`
+        + ` border: ${px(2, scale)} solid `
+        + `${active ? THEME.accent : shade(color, -0.35)};`
+        + ` border-radius: ${pxSoft(6, scale)};`
+        + ` width: ${size}px; height: ${size}px;`
+        + ` padding: 0; margin: ${px(CHIP_GAP_PX / 2, scale)};`;
+};
+
+// A key of the 0-9A-F pad: eight per row across the picker block, so the pad
+// lines up with the palette above it.  `active` marks the key under a press.
+const HEX_KEY_H = 36;
+const HEX_KEY_W = PICK_W / 8 - CHIP_GAP_PX;
+const hexKeyStyle = (scale, active = false) =>
+    `background-color: ${active ? THEME.on[0] : THEME.key[0]};`
+    + ` color: ${active ? THEME.on[1] : THEME.key[1]};`
+    + ` border-radius: ${pxSoft(6, scale)};`
+    + ` padding: 0; margin: ${px(CHIP_GAP_PX / 2, scale)};`
+    + ` font-size: ${px(15, scale)};`
+    + ` width: ${Math.max(18, Math.round(HEX_KEY_W * scale))}px;`
+    + ` height: ${Math.max(18, Math.round(HEX_KEY_H * scale))}px;`;
+
 
 // Set by the extension from [layout] background=<path>; kept as a plain URI
 // string so this section stays free of gi:// imports (the style test slices it
@@ -496,21 +653,23 @@ const sectionLabelStyle = scale =>
     + ` font-size: ${px(16, scale)};`
     + ` padding: ${px(2, scale)} ${px(12, scale)} ${px(2, scale)} ${px(4, scale)};`;
 
-// A colour chip: a fixed square (so the grid columns line up and the shape
-// matches the rounded keys instead of coming out as an arbitrary ellipse), the
-// theme accent as an outline when it is the colour in use.
-const SWATCH_PX = 30;
-const swatchSize = scale => Math.max(16, Math.round(SWATCH_PX * scale));
+// A role button in the palette editor: filled with the colour that role has
+// right now, outlined with the theme accent while it is the role the picker
+// edits, and its label in the contrasting glyph colour so it stays readable on
+// a light palette.
+const roleBtnStyle = (color, active, scale) =>
+    `background-color: ${color}; color: ${fgFor(color)};`
+    + ` border: ${px(2, scale)} solid `
+    + `${active ? THEME.accent : shade(color, -0.35)};`
+    + ` border-radius: ${pxSoft(6, scale)};`
+    + ` padding: ${px(4, scale)} ${px(10, scale)};`
+    + ` margin: ${px(2, scale)}; font-size: ${px(15, scale)};`;
 
-const swatchStyle = (color, active, scale) => {
-    const size = swatchSize(scale);
-    return `background-color: ${color};`
-        + ` border: ${px(2, scale)} solid `
-        + `${active ? THEME.accent : shade(color, -0.35)};`
-        + ` border-radius: ${pxSoft(6, scale)};`
-        + ` width: ${size}px; height: ${size}px;`
-        + ` padding: 0; margin: ${px(2, scale)};`;
-};
+// The hex readout under the picker is data, not a preview of the colour, so it
+// uses the sheet's own label colour.
+const hexReadoutStyle = scale =>
+    `color: ${THEME.grip[1]}; font-size: ${px(15, scale)};`
+    + ` padding: ${px(2, scale)} ${px(4, scale)};`;
 
 const shiftGlyphStyle = (on, scale) =>
     `color: ${on ? THEME.shift[1] : THEME.shift[0]};`
@@ -731,6 +890,15 @@ export default class ErhaiOSK extends Extension {
             }
             this._custom = makeCustomTheme(this._customHex);
             this._themes = [...THEMES, this._custom];
+            // The picker starts on the panel colour, which is the one a user
+            // most often wants to change first.
+            this._pickerRole = 'panel';
+            this._pickerHsv = hexToHsv(this._customHex.panel);
+            this._pickDrag = false;
+            this._hexInput = null;
+            this._paletteSnapshot = null;
+            this._paletteId = 0;
+            this._saveId = 0;
             this._themeName = cfg && this._themes.some(t => t.name === cfg.theme)
                 ? cfg.theme : DEFAULT_THEME;
             THEME = this._themes.find(t => t.name === this._themeName);
@@ -864,6 +1032,14 @@ export default class ErhaiOSK extends Extension {
             GLib.source_remove(this._monitorFitId);
             this._monitorFitId = 0;
         }
+        if (this._saveId) {
+            GLib.source_remove(this._saveId);
+            this._saveId = 0;
+        }
+        if (this._paletteId) {
+            GLib.source_remove(this._paletteId);
+            this._paletteId = 0;
+        }
         if (this._monitorId) {
             Main.layoutManager.disconnect(this._monitorId);
             this._monitorId = 0;
@@ -901,7 +1077,19 @@ export default class ErhaiOSK extends Extension {
         this._savedConfig = null;
         this._custom = null;
         this._customBox = null;
-        this._swatchBtns = [];
+        this._roleBtns = {};
+        this._paletteBtns = [];
+        this._spectrum = null;
+        this._valueBar = null;
+        this._hexPad = null;
+        this._hexKeys = [];
+        this._hexLabel = null;
+        this._hexBack = null;
+        this._hexInput = null;
+        this._moreBtn = null;
+        this._doneBtn = null;
+        this._revertBtn = null;
+        this._paletteSnapshot = null;
         this._themes = [...THEMES];
         this._background = null;
         this._backgroundOn = false;
@@ -1070,36 +1258,190 @@ export default class ErhaiOSK extends Extension {
         });
         this._settings.add_child(themeGrid);
 
-        // 自定义配色编辑器: five rows of chips, only shown while the custom
-        // palette is the active theme.
-        const grid = new Clutter.GridLayout({
-            row_spacing: Math.round(2 * this._scale),
-            column_spacing: Math.round(2 * this._scale),
-        });
-        this._customLayout = grid;
-        this._customBox = new St.Widget({
-            layout_manager: grid,
+        // 自定义配色: the shape of the Windows 11 picker, adapted to a sheet that
+        // lives inside the panel.  Two things cannot be copied: the code is
+        // typed on an in-panel 0-9A-F pad (nothing in top chrome can take the
+        // real keyboard), and 完成/取消 only close the sheet / put the palette
+        // back, because the keyboard behind the sheet is already the preview.
+        this._customBox = new St.BoxLayout({
+            vertical: true,
             reactive: false,
-            x_expand: true,
+            x_expand: false,
+            x_align: Clutter.ActorAlign.START,
             visible: this._themeName === CUSTOM_THEME,
         });
-        this._swatchBtns = [];
-        let gridRow = 0;
+
+        const roleRow = new St.BoxLayout({reactive: false});
+        this._roleBtns = {};
         for (const role of CUSTOM_ROLES) {
-            grid.attach(this._sectionLabel(T(role.label)), 0, gridRow, 1, 1);
-            role.colors.forEach((color, column) => {
+            const btn = new St.Button({
+                child: new St.Label({
+                    text: T(role.label),
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+                style: roleBtnStyle(this._customHex[role.key],
+                    role.key === this._pickerRole, this._scale),
+                reactive: true,
+                can_focus: false,
+                track_hover: true,
+            });
+            btn.connect('clicked', () => this._pickRole(role.key));
+            roleRow.add_child(btn);
+            this._roleBtns[role.key] = btn;
+        }
+        this._customBox.add_child(roleRow);
+
+        // 调色板: one shared set of 24, two rows of twelve.
+        this._paletteBtns = [];
+        const paletteBox = new St.BoxLayout({vertical: true, reactive: false});
+        for (let row = 0; row < Math.ceil(PALETTE.length / PALETTE_COLS); row++) {
+            const line = new St.BoxLayout({reactive: false});
+            for (let col = 0; col < PALETTE_COLS; col++) {
+                const color = PALETTE[row * PALETTE_COLS + col];
+                if (!color)
+                    continue;
                 const btn = new St.Button({
-                    style: swatchStyle(color, false, this._scale),
+                    style: paletteChipStyle(color, false, this._scale),
                     reactive: true,
                     can_focus: false,
                     track_hover: true,
                 });
-                btn.connect('clicked', () => this._setCustomColor(role.key, color));
-                grid.attach(btn, column + 1, gridRow, 1, 1);
-                this._swatchBtns.push({btn, role: role.key, color});
-            });
-            gridRow++;
+                btn.connect('clicked', () => this._pickHex(color));
+                line.add_child(btn);
+                this._paletteBtns.push({btn, color});
+            }
+            paletteBox.add_child(line);
         }
+        this._customBox.add_child(paletteBox);
+
+        // The spectrum: hue across, saturation down.  Size comes from
+        // _syncCustomEditor(), together with the palette pitch it has to line up
+        // with, so a size step keeps the block square-edged.  x_align START is
+        // what makes the box honour that width instead of filling the sheet.
+        this._spectrum = new St.DrawingArea({
+            reactive: true,
+            x_align: Clutter.ActorAlign.START,
+        });
+        this._spectrum.connect('repaint', () =>
+            paintSpectrum(this._spectrum, this._pickerHsv));
+        this._customBox.add_child(this._spectrum);
+        this._bindPick(this._spectrum, (fx, fy) => {
+            this._pickerHsv.h = fx * 360;
+            this._pickerHsv.s = Math.max(0, Math.min(1, 1 - fy));
+            this._pickColor(true);
+        });
+
+        this._valueBar = new St.DrawingArea({
+            reactive: true,
+            x_align: Clutter.ActorAlign.START,
+        });
+        this._valueBar.connect('repaint', () =>
+            paintValueBar(this._valueBar, this._pickerHsv));
+        this._customBox.add_child(this._valueBar);
+        this._bindPick(this._valueBar, fx => {
+            this._pickerHsv.v = fx;
+            this._pickColor(true);
+        });
+
+        // 色号: the code in use, a backspace for the pad, and 更多.
+        const hexRow = new St.BoxLayout({reactive: false});
+        this._hexLabel = new St.Label({
+            text: this._customHex[this._pickerRole] ?? '',
+            x_align: Clutter.ActorAlign.START,
+            x_expand: true,
+            style: hexReadoutStyle(this._scale),
+        });
+        hexRow.add_child(this._hexLabel);
+
+        this._hexBack = new St.Button({
+            child: new St.Label({
+                text: '⌫',
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+            style: hexKeyStyle(this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._hexBack.connect('clicked', () => this._hexBackspace());
+        hexRow.add_child(this._hexBack);
+
+        this._moreBtn = new St.Button({
+            child: new St.Label({
+                text: T('More'),
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+            style: sizeBtnStyle(false, this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._moreBtn.connect('clicked', () => this._toggleHexPad());
+        hexRow.add_child(this._moreBtn);
+        this._customBox.add_child(hexRow);
+
+        // The 0-9A-F pad, hidden until 更多 is tapped.  Six digits, then the code
+        // applies by itself -- no 应用 button to forget.
+        this._hexPad = new St.BoxLayout({
+            vertical: true,
+            reactive: false,
+            visible: false,
+        });
+        this._hexKeys = [];
+        const padChars = '0123456789ABCDEF';
+        for (let row = 0; row < 2; row++) {
+            const line = new St.BoxLayout({reactive: false});
+            for (let col = 0; col < 8; col++) {
+                const char = padChars[row * 8 + col];
+                const btn = new St.Button({
+                    child: new St.Label({
+                        text: char,
+                        y_align: Clutter.ActorAlign.CENTER,
+                    }),
+                    style: hexKeyStyle(this._scale),
+                    reactive: true,
+                    can_focus: false,
+                    track_hover: true,
+                });
+                btn.connect('clicked', () => this._hexType(char));
+                line.add_child(btn);
+                this._hexKeys.push({btn, char});
+            }
+            this._hexPad.add_child(line);
+        }
+        this._customBox.add_child(this._hexPad);
+
+        // 完成 / 取消, as in the picker this copies.  完成 closes the sheet;
+        // 取消 puts the palette back, which only matters because every touch has
+        // already changed the keyboard behind the sheet.
+        const doneRow = new St.BoxLayout({reactive: false});
+        this._doneBtn = new St.Button({
+            child: new St.Label({
+                text: T('Done'),
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+            style: sizeBtnStyle(false, this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._doneBtn.connect('clicked', () => this._closeSettings());
+        doneRow.add_child(this._doneBtn);
+
+        this._revertBtn = new St.Button({
+            child: new St.Label({
+                text: T('Cancel'),
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+            style: sizeBtnStyle(false, this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._revertBtn.connect('clicked', () => this._revertPalette());
+        doneRow.add_child(this._revertBtn);
+        this._customBox.add_child(doneRow);
+
         this._settings.add_child(this._customBox);
 
         const opacityRow = new St.BoxLayout({reactive: false});
@@ -1147,6 +1489,11 @@ export default class ErhaiOSK extends Extension {
         this._bgRow = new St.BoxLayout({reactive: false});
         this._settings.add_child(this._bgRow);
         this._buildResetRow();
+
+        // The picker's two drawing areas have no natural size of their own: the
+        // sheet is built before anything calls _applyScale(), so give them theirs
+        // here or they allocate 0x0 and never paint.
+        this._syncCustomEditor();
 
         this._box.add_child(this._settings);
     }
@@ -1725,6 +2072,11 @@ export default class ErhaiOSK extends Extension {
         // Re-scan the backgrounds folder on every open: dropping a new image in
         // must not require a re-login.
         this._buildBackgroundRow();
+        // What 取消 goes back to: the palette as it is before any touch.
+        this._paletteSnapshot = {...this._customHex};
+        // A half-typed code from last time is not a colour anyone meant to keep.
+        this._hexInput = null;
+        this._syncCustomEditor();
         this._settingsOpen = true;
         this._settings.visible = true;
         this._reflow(oldHeight);
@@ -1931,50 +2283,276 @@ export default class ErhaiOSK extends Extension {
             this._reflow(oldHeight);
     }
 
-    // ---- theme (深灰 / 浅色 / 暖色 / 高对比 / 自定义) -----------------
-    // Restyle in place, exactly like a size change: nothing is rebuilt, so a
-    // finger resting on a key keeps the button it started on.
-    _setCustomColor(role, color) {
+    // ---- custom palette (调色板 / 取色器 / 色号) ------------------------
+    // A DrawingArea is not a St.Button: there is no click gesture to lean on, so
+    // press-to-release is followed by hand.  Touch keeps delivering updates
+    // while the finger is down (implicit grab); a mouse drag that leaves the
+    // actor stops where it left, which is why 'leave-event' clears the flag
+    // instead of taking a stage grab.
+    _bindPick(area, onPoint) {
+        const point = event => {
+            const [stageX, stageY] = this._coords(event);
+            const [areaX, areaY] = area.get_transformed_position();
+            const [width, height] = area.get_surface_size();
+            if (width <= 0 || height <= 0)
+                return Clutter.EVENT_STOP;
+            onPoint(
+                Math.max(0, Math.min(1, (stageX - areaX) / width)),
+                Math.max(0, Math.min(1, (stageY - areaY) / height)));
+            return Clutter.EVENT_STOP;
+        };
+        area.connect('button-press-event', (_actor, event) => {
+            this._pickDrag = true;
+            return point(event);
+        });
+        area.connect('motion-event', (_actor, event) =>
+            this._pickDrag ? point(event) : Clutter.EVENT_PROPAGATE);
+        area.connect('leave-event', () => {
+            this._pickDrag = false;
+            return Clutter.EVENT_PROPAGATE;
+        });
+        area.connect('button-release-event', () => {
+            this._endPick();
+            return Clutter.EVENT_STOP;
+        });
+        area.connect('touch-event', (_actor, event) => {
+            const type = event.type();
+            if (type === Clutter.EventType.TOUCH_BEGIN
+                || type === Clutter.EventType.TOUCH_UPDATE) {
+                this._pickDrag = true;
+                return point(event);
+            }
+            if (type === Clutter.EventType.TOUCH_END
+                || type === Clutter.EventType.TOUCH_CANCEL) {
+                this._endPick();
+                return Clutter.EVENT_STOP;
+            }
+            return Clutter.EVENT_PROPAGATE;
+        });
+    }
+
+    // Which role the editor acts on: the palette outline, the square, the bar
+    // and the code all follow that role's current colour.
+    _pickRole(role) {
         if (!CUSTOM_ROLES.some(r => r.key === role))
             return;
-        const next = {...this._customHex, [role]: color};
+        this._pickerRole = role;
+        this._pickerHsv = hexToHsv(
+            this._customHex[role] ?? CUSTOM_DEFAULT[role]);
+        // A half-typed code belongs to the role it was started on.
+        this._hexInput = null;
+        this._syncCustomEditor();
+    }
+
+    // Every path -- palette chip, spectrum, brightness bar, typed code -- ends
+    // here with one #rrggbb.  A drag samples at frame rate and there are 120
+    // keys to restyle, so a live sample only queues the restyle for the next
+    // idle cycle and saves once the finger stops.
+    _setPaletteColor(hex, live) {
+        if (!hexToRgb(hex))
+            return;
+        const next = {...this._customHex, [this._pickerRole]: hex};
         const theme = makeCustomTheme(next);
         if (!theme)
             return;
-        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._customHex = next;
         this._custom = theme;
         this._themes[this._themes.length - 1] = theme;
         THEME = theme;
         this._themeName = CUSTOM_THEME;
-        this._applyScale();
         this._syncCustomEditor();
+        if (live) {
+            this._queueRestyle();
+            this._queueSave();
+            return;
+        }
+        this._applyScale();
         this._saveConfig();
-        log(`pad-osk: custom ${role} -> ${color}`);
+        log(`pad-osk: custom ${this._pickerRole} -> ${hex}`);
+    }
+
+    _pickColor(live) {
+        this._setPaletteColor(hsvToHex(
+            this._pickerHsv.h, this._pickerHsv.s, this._pickerHsv.v), live);
+    }
+
+    // A palette chip or a finished code: the picker follows the colour it was
+    // given, so the marker and the bar stay on the value that is in use.
+    _pickHex(hex) {
+        if (!hexToRgb(hex))
+            return;
+        this._pickerHsv = hexToHsv(hex);
+        this._hexInput = null;
+        this._setPaletteColor(hex, false);
+    }
+
+    _toggleHexPad() {
+        if (!this._hexPad)
+            return;
+        const show = !this._hexPad.visible;
+        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
+        this._hexPad.visible = show;
+        // Opening the pad always starts a fresh code for the current role,
+        // prefilled with nothing: the readout already shows the colour in use.
+        this._hexInput = show ? '' : null;
+        this._syncCustomEditor();
         this._reflow(oldHeight);
     }
 
-    // Show the chip rows only for the custom theme, and outline the chips that
-    // are currently in use.
+    // Six digits and it applies by itself -- no 应用 button to forget.
+    _hexType(char) {
+        if (this._hexInput === null)
+            this._hexInput = '';
+        if (this._hexInput.length >= 6)
+            return;
+        this._hexInput += char;
+        this._syncCustomEditor();
+        if (this._hexInput.length === 6)
+            this._pickHex(`#${this._hexInput}`);
+    }
+
+    _hexBackspace() {
+        if (this._hexInput === null)
+            return;
+        this._hexInput = this._hexInput.slice(0, -1);
+        this._syncCustomEditor();
+    }
+
+    _queueRestyle() {
+        if (this._paletteId || !this._box)
+            return;
+        this._paletteId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._paletteId = 0;
+            if (this._box)
+                this._applyScale();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    // Saving on a timer rather than on release: a touch that ends outside the
+    // area never reaches the release handler, but the timer still fires.
+    _queueSave() {
+        if (this._saveId) {
+            GLib.source_remove(this._saveId);
+            this._saveId = 0;
+        }
+        this._saveId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 400, () => {
+            this._saveId = 0;
+            this._saveConfig();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    // End of a press: flush whatever the live samples left queued, so what is on
+    // disk matches what is on screen the moment the finger lifts.
+    _endPick() {
+        this._pickDrag = false;
+        if (!this._paletteId && !this._saveId)
+            return;
+        if (this._paletteId) {
+            GLib.source_remove(this._paletteId);
+            this._paletteId = 0;
+        }
+        if (this._saveId) {
+            GLib.source_remove(this._saveId);
+            this._saveId = 0;
+        }
+        if (this._box)
+            this._applyScale();
+        this._saveConfig();
+        log(`pad-osk: custom ${this._pickerRole} -> `
+            + `${this._customHex[this._pickerRole]}`);
+    }
+
+    // 取消: back to the palette as it was when the sheet was opened.  The live
+    // samples have already repainted the keyboard, so this has to reapply -- and
+    // only the colours come back, not the theme the user picked in the meantime.
+    _revertPalette() {
+        const snapshot = this._paletteSnapshot;
+        const theme = snapshot ? makeCustomTheme(snapshot) : null;
+        if (theme) {
+            this._customHex = {...snapshot};
+            this._custom = theme;
+            this._themes[this._themes.length - 1] = theme;
+            if (this._themeName === CUSTOM_THEME)
+                THEME = theme;
+        }
+        this._pickerHsv = hexToHsv(
+            this._customHex[this._pickerRole] ?? CUSTOM_DEFAULT[this._pickerRole]);
+        this._hexInput = null;
+        this._applyScale();
+        this._syncCustomEditor();
+        this._saveConfig();
+        this._closeSettings();
+        log('pad-osk: palette reverted');
+    }
+
+    // Visible only for the custom palette, because the keyboard behind the sheet
+    // is the preview.  The one place that sizes the picker and reflects the five
+    // role colours, the palette outline and the code -- so a size step change
+    // (_applyScale -> _restylePalette) keeps all of it in proportion.
     _syncCustomEditor() {
         if (!this._customBox)
             return;
-        if (this._customLayout) {
-            const gap = Math.round(2 * this._scale);
-            this._customLayout.row_spacing = gap;
-            this._customLayout.column_spacing = gap;
+        this._customBox.visible = this._themeName === CUSTOM_THEME;
+        const scale = this._scale;
+        const current = String(this._customHex[this._pickerRole] ?? '');
+
+        for (const role of CUSTOM_ROLES) {
+            const btn = this._roleBtns?.[role.key];
+            if (btn) {
+                btn.style = roleBtnStyle(
+                    this._customHex[role.key] ?? CUSTOM_DEFAULT[role.key],
+                    role.key === this._pickerRole, scale);
+            }
         }
-        const active = this._themeName === CUSTOM_THEME;
-        this._customBox.visible = active;
-        for (const item of this._swatchBtns ?? []) {
-            if (item.btn)
-                item.btn.style = swatchStyle(
-                    item.color, this._customHex[item.role] === item.color,
-                    this._scale);
+        for (const item of this._paletteBtns ?? []) {
+            item.btn.style = paletteChipStyle(item.color,
+                item.color.toLowerCase() === current.toLowerCase(), scale);
+        }
+        // The spectrum and the bar are twelve chips wide so the block keeps one
+        // straight right edge at every size step.
+        if (this._spectrum) {
+            this._spectrum.set_width(
+                Math.max(120, Math.round(PICK_W * scale)));
+            this._spectrum.set_height(
+                Math.max(60, Math.round(SPECTRUM_H * scale)));
+            this._spectrum.queue_repaint();
+        }
+        if (this._valueBar) {
+            this._valueBar.set_width(
+                Math.max(120, Math.round(PICK_W * scale)));
+            this._valueBar.set_height(
+                Math.max(10, Math.round(VALUE_H * scale)));
+            this._valueBar.queue_repaint();
+        }
+        for (const item of this._hexKeys ?? [])
+            item.btn.style = hexKeyStyle(scale);
+        if (this._hexBack) {
+            this._hexBack.visible = this._hexInput !== null;
+            this._hexBack.style = hexKeyStyle(scale);
+        }
+        if (this._moreBtn)
+            this._moreBtn.style = sizeBtnStyle(false, scale);
+        if (this._doneBtn)
+            this._doneBtn.style = sizeBtnStyle(false, scale);
+        if (this._revertBtn)
+            this._revertBtn.style = sizeBtnStyle(false, scale);
+        const moreLabel = this._moreBtn?.get_child();
+        if (moreLabel)
+            moreLabel.text = this._hexPad?.visible ? T('Less') : T('More');
+        if (this._hexLabel) {
+            // While a code is being typed the readout shows the digits so far
+            // and dots for the rest; otherwise it is the colour in use.
+            this._hexLabel.text = this._hexInput === null
+                ? current
+                : `#${this._hexInput}`
+                    + '·'.repeat(Math.max(0, 6 - this._hexInput.length));
+            this._hexLabel.style = hexReadoutStyle(scale);
         }
     }
 
-    _restyleSwatches() {
+    _restylePalette() {
         this._syncCustomEditor();
     }
 
@@ -1995,10 +2573,7 @@ export default class ErhaiOSK extends Extension {
         content.add_child(chips);
 
         content.add_child(new St.Label({
-            // Beta marker: the chip editor is new and the derived glyph colours
-            // may still need tuning on light palettes.
-            text: theme.name === CUSTOM_THEME
-                ? `${T(theme.label)}(Beta)` : T(theme.label),
+            text: T(theme.label),
             style: `color: ${theme.key[1]}; font-size: ${px(13, s)};`,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
@@ -2207,7 +2782,7 @@ export default class ErhaiOSK extends Extension {
         this._updateThemeButtons();
         this._updateOpacityButtons();
         this._updateRadiusButtons();
-        this._restyleSwatches();
+        this._restylePalette();
         if (this._resetBtn)
             this._resetBtn.style = sizeBtnStyle(false, s);
         this._styleIfAlive(this._pickBtn, sizeBtnStyle(false, s));
