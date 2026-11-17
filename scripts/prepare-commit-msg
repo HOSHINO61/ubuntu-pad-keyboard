@@ -1,5 +1,5 @@
 #!/bin/sh
-# Append the assistant attribution trailer to every commit message.
+# Append the assistant attribution trailers to every commit message.
 # Copied into .git/hooks/prepare-commit-msg by scripts/install-hooks.sh.
 msgfile="$1"
 [ -n "$msgfile" ] || exit 0
@@ -9,8 +9,12 @@ if grep -qi '^Assisted-by:' "$msgfile"; then
     exit 0
 fi
 
-# Keep the message body and trailers separated by exactly one blank line.
+# Keep the message body and the trailer block separated by exactly one blank
+# line.  The two trailers stay adjacent: a blank line between them would make
+# git treat "Co-Authored-By" as a second block, and GitHub would stop counting
+# the co-author.
 if [ -s "$msgfile" ]; then
     printf '\n' >> "$msgfile"
 fi
-printf 'Assisted-by: DeepSeek V4.1 flash\n' >> "$msgfile"
+printf 'Assisted-by: LLM\n' >> "$msgfile"
+printf 'Co-Authored-By: DeepSeek V4.1 flash <noreply@deepseek.com>\n' >> "$msgfile"
