@@ -1279,16 +1279,19 @@ export default class ErhaiOSK extends Extension {
             this._box.add_child(this._rowsBox);
 
             this._container.add_child(this._box);
+
+            // No params: GNOME 50 rejects 'affectsInputRegion'.
+            Main.layoutManager.addTopChrome(this._container);
+
             // Above the slab in z-order: the card is opened deliberately and
             // must never end up behind the keyboard it was detached from.  It
             // lives on uiGroup rather than inside the top-chrome container:
             // that container is only as big as its children's preferred size,
             // so a card painted outside it is also outside the chrome's input
-            // region and takes no clicks at all.
+            // region and takes no clicks at all.  Added after the chrome on
+            // purpose -- children stack in insertion order, and adding it first
+            // put the translucent keyboard on top of the card.
             Main.uiGroup.add_child(this._settingsCard);
-
-            // No params: GNOME 50 rejects 'affectsInputRegion'.
-            Main.layoutManager.addTopChrome(this._container);
 
             this._box.connect('notify::allocation',
                 this._onAllocation.bind(this));
@@ -2729,6 +2732,16 @@ export default class ErhaiOSK extends Extension {
         this._syncCustomEditor();
         this._settingsOpen = true;
         this._settingsCard.visible = true;
+        // The card is on uiGroup, outside the chrome's stacking order; raising
+        // it here keeps it above the keyboard even after other chrome is added.
+        try {
+            if (typeof this._settingsCard.raise_top === 'function')
+                this._settingsCard.raise_top();
+            else if (typeof this._settingsCard.raise === 'function')
+                this._settingsCard.raise();
+        } catch (e) {
+            log(`pad-osk: card raise failed: ${e}`);
+        }
         // No reflow: the keyboard keeps its height, the card is placed on its
         // own.
         this._scheduleSettingsLayout(true);
@@ -4153,14 +4166,9 @@ export default class ErhaiOSK extends Extension {
         };
     }
 
-    _fitSettingsCard() {
+    _fitSettingsCard(space, area) {
         if (!this._settingsCard || !this._settingsOpen)
             return;
-        const mon = Main.layoutManager.primaryMonitor;
-        if (!mon)
-            return;
-        const area = this._workArea(mon);
-        const space = this._settingsRoom(area);
         const pad = Math.round(10 * this._scale);
         const maxW = Math.max(320, area.width - 24);
         // A page as wide as a phone, not as wide as the keyboard it belongs to:
@@ -4176,24 +4184,24 @@ export default class ErhaiOSK extends Extension {
         const natural = this._settings.get_preferred_height(innerW)[1] ?? 0;
         if (natural <= 0)
             return;
+        // Fit to the side the card is about to stand on, from the same
+        // measurement the placement uses.  Measuring both twice let a growing
+        // card be sized for one side and placed on the other, and the card
+        // covered the keyboard instead of scrolling.
+        const sideRoom = space.preferAbove ? space.above : space.below;
         // Keyboard covering nearly the whole desktop leaves no side to stand on,
         // so the card gets the work area and scrolls inside it.
-        const ceiling = space.room > 220
-            ? Math.max(160, space.room - 6)
+        const ceiling = sideRoom > 220
+            ? Math.max(160, sideRoom - 6)
             : area.height - 24;
         const scrollH = Math.min(natural,
             Math.max(120, ceiling - headerH - 2 * pad));
         this._settingsScroll.set_height(scrollH);
     }
 
-    _placeSettings() {
-        if (!this._settingsCard || !this._settingsOpen || !this._box)
+    _placeSettings(space, area) {
+        if (!this._settingsCard || !this._settingsOpen)
             return;
-        const mon = Main.layoutManager.primaryMonitor;
-        if (!mon)
-            return;
-        const area = this._workArea(mon);
-        const space = this._settingsRoom(area);
         let [w, h] = this._settingsCard.get_size();
         if (w <= 0 || h <= 0) {
             w = this._settingsCard.width || Math.round(area.width * 0.5);
@@ -4209,17 +4217,30 @@ export default class ErhaiOSK extends Extension {
             Math.min(Math.round(space.kbX + (space.kbW - w) / 2),
                 area.x + area.width - w - margin));
         let y;
-        if (space.preferAbove && space.above >= h)
-            y = space.kbY - h - gap;
-        else if (space.below >= h)
-            y = space.kbY + space.kbH + gap;
-        else if (space.above >= h)
+        if (space.preferAbove)
             y = space.kbY - h - gap;
         else
-            y = area.y + Math.round((area.height - h) / 2);
+            y = space.kbY + space.kbH + gap;
         y = Math.max(area.y + margin,
             Math.min(Math.round(y), area.y + area.height - h - margin));
         this._settingsCard.set_translation(x, y, 0);
+    }
+
+    // One measurement, one fit, one placement.  Splitting them let the measure
+    // taken while the keyboard was still settling (y=0 instead of the painted
+    // 132) decide the card's height while the next one decided its side, and
+    // the card ended up lying across the keys.
+    _layoutSettingsCard(fit) {
+        if (!this._settingsCard || !this._settingsOpen || !this._box)
+            return;
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon)
+            return;
+        const area = this._workArea(mon);
+        const space = this._settingsRoom(area);
+        if (fit)
+            this._fitSettingsCard(space, area);
+        this._placeSettings(space, area);
     }
 
     // Measuring needs an allocation, and one idle is not always enough, so the
@@ -4231,9 +4252,7 @@ export default class ErhaiOSK extends Extension {
             this._settingsLayoutId = 0;
             if (!this._settingsOpen)
                 return GLib.SOURCE_REMOVE;
-            if (fit)
-                this._fitSettingsCard();
-            this._placeSettings();
+            this._layoutSettingsCard(fit);
             if (fit)
                 this._scheduleSettingsLayout(false);
             return GLib.SOURCE_REMOVE;
@@ -4256,7 +4275,7 @@ export default class ErhaiOSK extends Extension {
         this._box.set_translation(nx, ny, 0);
         // The card follows the keyboard it was detached from.
         if (this._settingsOpen)
-            this._placeSettings();
+            this._layoutSettingsCard(false);
     }
 
     // A rotation, a different primary display or a resolution change moves the
