@@ -974,7 +974,7 @@ const settingsCloseBtnStyle = scale =>
 const settingsBackBtnStyle = scale =>
     `color: ${pageFgSoft(0.85)}; background-color: transparent;`
     + ` border-radius: ${pxSoft(10, scale)};`
-    + ` padding: ${px(2, scale)} ${px(12, scale)} ${px(2, scale)} 0;`
+    + ` padding: ${px(2, scale)} ${px(16, scale)} ${px(2, scale)} ${px(4, scale)};`
     + ` font-size: ${px(38, scale)};`;
 
 const settingsDetailsStyle = scale =>
