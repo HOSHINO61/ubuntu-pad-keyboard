@@ -126,3 +126,40 @@ msgstr "更多"
 
 msgid "Less"
 msgstr "收起"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Size hint"
+msgstr "键盘整体大小的五档切换"
+
+msgid "Theme hint"
+msgstr "预设主题，或自由编辑"
+
+msgid "Opacity hint"
+msgstr "调整面板透明度"
+
+msgid "Radius hint"
+msgstr "按键和面板的圆角"
+
+msgid "Background hint"
+msgstr "给键盘铺一张背景图"
+
+msgid "About hint"
+msgstr "版本信息与恢复默认"
+msgid "Theme"
+msgstr "主题"
+
+msgid "About"
+msgstr "关于"
+msgid "Project site"
+msgstr "项目网站"
+
+msgid "Project site hint"
+msgstr "打开 mybailu.cn/osk/"
+
+msgid "Release notes"
+msgstr "版本发布"
+
+msgid "Release notes hint"
+msgstr "本项目 GitHub"

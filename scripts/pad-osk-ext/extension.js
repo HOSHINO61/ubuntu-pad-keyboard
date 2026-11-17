@@ -467,10 +467,148 @@ const paintValueBar = (area, hsv) => {
     cr.$dispose();
 };
 
-// A 调色板 chip: the colour itself, outlined with the theme accent while the
-// current role already holds it.  A near-black chip needs a light edge or it is
-// an empty-looking hole on the dark sheet, so the outline follows the chip's own
-// luminance instead of always darkening it.
+// Settings-row icons, drawn with cairo rather than borrowed from a glyph font:
+// one accent colour, strokes only, in a 30x30 box.  A glyph would be one line of
+// code, but ⌨ and 🎨 change shape per font install and a few of them are emoji
+// -- on a tablet they came out with their own colours and no shared weight.
+// Fixed icon colours, not the theme accent: MIUIX rows are read by colour,
+// and a custom palette can put the accent next to a panel tint of the same
+// value, which turned every icon into a smudge.
+const ICON_COLORS = {
+    size: '#4C8DFF',
+    theme: '#A16BFF',
+    opacity: '#35C759',
+    radius: '#FF9F0A',
+    background: '#30B0C7',
+    info: '#8E8E93',
+    reset: '#FF6B6B',
+    website: '#0A84FF',
+    update: '#5E5CE6',
+};
+
+const paintSettingIcon = (area, kind) => {
+    const cr = area.get_context();
+    const [width, height] = area.get_surface_size();
+    if (width <= 0 || height <= 0)
+        return;
+    const size = Math.min(width, height);
+    const accent = colorParts(ICON_COLORS[kind] ?? ICON_COLORS.info);
+    const unit = Math.max(0.9, size / 15);
+    cr.setSourceRGBA(accent.r / 255, accent.g / 255, accent.b / 255, 1);
+    cr.setLineWidth(unit);
+    cr.setLineCap(cairo.LineCap.ROUND);
+    cr.translate(width / 2, height / 2);
+
+    const half = size * 0.42;                 // drawing half-extent
+    const rounded = (x, y, w, h, r) => {
+        cr.moveTo(x + r, y);
+        cr.lineTo(x + w - r, y);
+        cr.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+        cr.lineTo(x + w, y + h - r);
+        cr.arc(x + w - r, y + h - r, r, 0, Math.PI / 2);
+        cr.lineTo(x + r, y + h);
+        cr.arc(x + r, y + h - r, r, Math.PI / 2, Math.PI);
+        cr.lineTo(x, y + r);
+        cr.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
+        cr.closePath();
+    };
+    const dot = (x, y, r) => {
+        cr.arc(x, y, r, 0, Math.PI * 2);
+        cr.fill();
+    };
+
+    switch (kind) {
+    case 'size':                              // keyboard: a frame with keys
+        rounded(-half, -half * 0.62, half * 2, half * 1.24, half * 0.24);
+        cr.stroke();
+        for (let i = 0; i < 3; i++)
+            dot(-half * 0.45 + i * half * 0.45, -half * 0.16, size / 24);
+        cr.rectangle(-half * 0.6, half * 0.16, half * 1.2, half * 0.22);
+        cr.fill();
+        break;
+    case 'theme':                             // palette: disc with paint dabs
+        cr.arc(0, 0, half, 0, Math.PI * 2);
+        cr.stroke();
+        dot(-half * 0.32, -half * 0.2, size / 20);
+        dot(half * 0.28, -half * 0.3, size / 26);
+        dot(half * 0.32, half * 0.28, size / 23);
+        break;
+    case 'opacity': {                         // half-filled disc
+        cr.arc(0, 0, half, 0, Math.PI * 2);
+        cr.clip();
+        cr.rectangle(-half, -half, half, half * 2);
+        cr.fill();
+        cr.resetClip();
+        cr.arc(0, 0, half, 0, Math.PI * 2);
+        cr.stroke();
+        break;
+    }
+    case 'radius':                            // a square with one soft corner
+        rounded(-half, -half, half * 2, half * 2, half * 0.55);
+        cr.stroke();
+        break;
+    case 'background':                        // a picture: frame, hills, sun
+        rounded(-half, -half * 0.78, half * 2, half * 1.56, half * 0.2);
+        cr.stroke();
+        cr.arc(half * 0.52, -half * 0.36, size / 22, 0, Math.PI * 2);
+        cr.fill();
+        cr.moveTo(-half * 0.78, half * 0.5);
+        cr.lineTo(-half * 0.2, -half * 0.02);
+        cr.lineTo(half * 0.22, half * 0.34);
+        cr.lineTo(half * 0.55, half * 0.1);
+        cr.lineTo(half * 0.78, half * 0.5);
+        cr.stroke();
+        break;
+    case 'info':                              // circled i
+        cr.arc(0, 0, half, 0, Math.PI * 2);
+        cr.stroke();
+        dot(0, -half * 0.42, size / 24);
+        cr.moveTo(0, -half * 0.1);
+        cr.lineTo(0, half * 0.45);
+        cr.stroke();
+        break;
+    case 'reset':                             // circular arrow
+        cr.arc(0, 0, half * 0.85, -Math.PI * 0.85, Math.PI * 0.62);
+        cr.stroke();
+        cr.moveTo(half * 0.85, -half * 0.95);
+        cr.lineTo(half * 0.85, -half * 0.35);
+        cr.lineTo(half * 0.28, -half * 0.6);
+        cr.fill();
+        break;
+    case 'website':                           // globe: circle + two meridians
+        cr.arc(0, 0, half, 0, Math.PI * 2);
+        cr.stroke();
+        cr.save();
+        cr.translate(0, 0);
+        cr.scale(0.55, 1);
+        cr.arc(0, 0, half, 0, Math.PI * 2);
+        cr.restore();
+        cr.stroke();
+        cr.moveTo(-half, 0);
+        cr.lineTo(half, 0);
+        cr.stroke();
+        break;
+    case 'update':                            // arrow into a tray
+        cr.moveTo(0, -half * 0.9);
+        cr.lineTo(0, half * 0.25);
+        cr.stroke();
+        cr.moveTo(-half * 0.42, -half * 0.18);
+        cr.lineTo(0, half * 0.28);
+        cr.lineTo(half * 0.42, -half * 0.18);
+        cr.stroke();
+        cr.moveTo(-half * 0.9, half * 0.55);
+        cr.lineTo(-half * 0.9, half * 0.85);
+        cr.lineTo(half * 0.9, half * 0.85);
+        cr.lineTo(half * 0.9, half * 0.55);
+        cr.stroke();
+        break;
+    default:
+        cr.arc(0, 0, half, 0, Math.PI * 2);
+        cr.stroke();
+        break;
+    }
+    cr.$dispose();
+};
 const paletteChipStyle = (color, active, scale) => {
     const size = Math.max(16, Math.round(CHIP_PX * scale));
     const rgb = hexToRgb(color);
@@ -689,13 +827,139 @@ const panelFgFor = theme => {
     return fgFor(hex);
 };
 
-// The settings sheet sits inside the panel, so it needs its own tint to read as
-// a separate surface; panelAlt is that tint per theme.
+// The emoji grid is a layer *inside* the panel, so it needs its own tint to
+// read as a separate surface; panelAlt is that tint per theme.
 const settingsPanelStyle = scale =>
     `background-color: ${THEME.panelAlt};`
     + ` border-radius: ${pxSoft(radiusSheet(), scale)};`
     + ` padding: ${px(8, scale)};`
     + ` margin: ${px(3, scale)} ${px(3, scale)} 0 ${px(3, scale)};`;
+
+// Settings are a card that floats over the application, not a strip inside the
+// keyboard: same tint, but with a border and a shadow so it reads as a dialog.
+// The close button and the padding live on the card, not on the scrolling
+// contents, so the header stays put while the body scrolls.
+// The panel tint is translucent on purpose: it sits on the slab, which already
+// paints the panel colour behind it.  A card that floats over the desktop has
+// nothing behind it, so the two have to be flattened into one colour -- used
+// as-is, panelAlt let the wallpaper and the keyboard read through the card.
+const colorParts = css => {
+    const text = String(css ?? '').trim();
+    const rgba = text.match(/^rgba?\(([^)]+)\)$/i);
+    if (rgba) {
+        const parts = rgba[1].split(',').map(v => Number(v.trim()));
+        return {
+            r: parts[0] || 0,
+            g: parts[1] || 0,
+            b: parts[2] || 0,
+            a: parts.length > 3 ? Math.max(0, Math.min(1, parts[3])) : 1,
+        };
+    }
+    const hex = text.replace('#', '');
+    if (/^[0-9a-f]{6}$/i.test(hex)) {
+        return {
+            r: parseInt(hex.slice(0, 2), 16),
+            g: parseInt(hex.slice(2, 4), 16),
+            b: parseInt(hex.slice(4, 6), 16),
+            a: 1,
+        };
+    }
+    const tri = text.split(',').map(v => Number(v.trim()));
+    if (tri.length === 3 && tri.every(n => Number.isFinite(n)))
+        return {r: tri[0], g: tri[1], b: tri[2], a: 1};
+    return {r: 0, g: 0, b: 0, a: 1};
+};
+
+const cardBg = theme => {
+    const base = colorParts(theme.panel);
+    const over = colorParts(theme.panelAlt);
+    const mix = channel =>
+        Math.round(over[channel] * over.a + base[channel] * (1 - over.a));
+    const alpha = theme.panelAlpha ?? 0.98;
+    return `rgba(${mix('r')}, ${mix('g')}, ${mix('b')}, ${alpha})`;
+};
+
+const settingsCardStyle = scale =>
+    `background-color: ${cardBg(THEME)};`
+    + ` border: ${px(1, scale)} solid rgba(140, 140, 140, 0.45);`
+    + ` border-radius: ${pxSoft(radiusSheet(), scale)};`
+    + ` padding: ${px(10, scale)};`
+    + ` box-shadow: 0 ${px(8, scale)} ${px(22, scale)} rgba(0, 0, 0, 0.38);`;
+
+// The card already paints the surface, so the contents inside only carry layout.
+const settingsContentStyle = () => 'padding: 0; margin: 0;';
+
+// MIUIX-shaped page: one large title, then rounded cards of rows.  A row is an
+// icon, a title over a hint, the current value and a chevron; the controls the
+// row hides open underneath it.  The block tint follows the text colour, so a
+// light theme gets a slightly darker card and a dark theme a slightly lighter
+// one -- the same relationship MIUIX keeps between page and group.
+const pageFg = () => panelFgFor(THEME);
+
+// Secondary text: the same ink as the page, thinned until it stops competing
+// with the row title.  Mixing the accent in here was the mistake that made the
+// current value unreadable on a light card.
+const pageFgSoft = (alpha) => {
+    const c = colorParts(panelFgFor(THEME));
+    return `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+};
+
+const groupBg = () => {
+    const fg = colorParts(panelFgFor(THEME));
+    return (fg.r + fg.g + fg.b) > 382
+        ? 'rgba(255, 255, 255, 0.09)'
+        : 'rgba(0, 0, 0, 0.055)';
+};
+
+const settingsPageTitleStyle = scale =>
+    `color: ${pageFg()};`
+    + ` font-size: ${px(30, scale)};`
+    + ` font-weight: bold;`
+    + ` margin: ${px(6, scale)} ${px(2, scale)} ${px(10, scale)} ${px(4, scale)};`;
+
+const settingsGroupStyle = scale =>
+    `background-color: ${groupBg()};`
+    + ` border-radius: ${pxSoft(18, scale)};`
+    + ` padding: ${px(2, scale)} 0;`
+    + ` margin: ${px(6, scale)} 0;`;
+
+const settingsRowStyle = scale =>
+    `padding: ${px(13, scale)} ${px(16, scale)};`
+    + ` border-radius: ${pxSoft(14, scale)};`;
+
+// Row text keeps its desktop size: the page scales with the keyboard, and a
+// 12px hint that follows the 0.55 size step lands at 10px, which reads as grey
+// noise rather than a second line.
+const settingsRowTitleStyle = scale =>
+    `color: ${pageFg()}; font-size: ${Math.round(15 + 1.5 * scale)}px;`
+    + ' font-weight: bold;';
+
+const settingsRowHintStyle = scale =>
+    `color: ${pageFgSoft(0.62)}; font-size: 12px;`;
+
+const settingsRowValueStyle = scale =>
+    `color: ${pageFgSoft(0.78)}; font-size: ${px(14, scale)};`
+    + ` margin: 0 ${px(8, scale)} 0 ${px(10, scale)};`;
+
+const settingsRowChevronStyle = scale =>
+    `color: ${pageFgSoft(0.42)}; font-size: ${px(18, scale)};`
+    + ` margin: 0 ${px(2, scale)} 0 0;`;
+
+const settingsSeparatorStyle = scale =>
+    'background-color: rgba(128, 128, 128, 0.22);'
+    + ` margin: 0 ${px(16, scale)};`;
+
+// The grip's ✕ is a chunky filled pill because it sits on keys; on the sheet
+// it is a quiet glyph, so the card does not grow a second title bar.
+const settingsCloseBtnStyle = scale =>
+    `color: ${pageFgSoft(0.6)}; background-color: transparent;`
+    + ` border-radius: ${pxSoft(10, scale)};`
+    + ` padding: ${px(1, scale)} ${px(8, scale)};`
+    + ` margin: ${px(2, scale)} ${px(4, scale)} 0 0;`
+    + ` font-size: ${px(18, scale)};`;
+
+const settingsDetailsStyle = scale =>
+    `padding: ${px(4, scale)} ${px(12, scale)} ${px(12, scale)} ${px(12, scale)};`;
 
 const sectionLabelStyle = scale =>
     `color: ${THEME.grip[1]};`
@@ -1015,6 +1279,13 @@ export default class ErhaiOSK extends Extension {
             this._box.add_child(this._rowsBox);
 
             this._container.add_child(this._box);
+            // Above the slab in z-order: the card is opened deliberately and
+            // must never end up behind the keyboard it was detached from.  It
+            // lives on uiGroup rather than inside the top-chrome container:
+            // that container is only as big as its children's preferred size,
+            // so a card painted outside it is also outside the chrome's input
+            // region and takes no clicks at all.
+            Main.uiGroup.add_child(this._settingsCard);
 
             // No params: GNOME 50 rejects 'affectsInputRegion'.
             Main.layoutManager.addTopChrome(this._container);
@@ -1093,6 +1364,19 @@ export default class ErhaiOSK extends Extension {
             Main.layoutManager.disconnect(this._monitorId);
             this._monitorId = 0;
         }
+        if (this._settingsLayoutId) {
+            GLib.source_remove(this._settingsLayoutId);
+            this._settingsLayoutId = 0;
+        }
+        if (this._settingsCard) {
+            try {
+                const parent = this._settingsCard.get_parent();
+                if (parent)
+                    parent.remove_child(this._settingsCard);
+            } catch (e) {
+                log(`pad-osk: card detach failed: ${e}`);
+            }
+        }
         if (this._container) {
             Main.layoutManager.removeChrome(this._container);
             this._container.destroy();
@@ -1116,6 +1400,10 @@ export default class ErhaiOSK extends Extension {
         this._resetBtn = null;
         this._sectionLabels = [];
         this._settings = null;
+        this._settingsCard = null;
+        this._settingsScroll = null;
+        this._settingsTitle = null;
+        this._settingsCloseBtn = null;
         this._settingsBtn = null;
         this._emojiPanel = null;
         this._emojiBtns = [];
@@ -1250,22 +1538,48 @@ export default class ErhaiOSK extends Extension {
         this._box.add_child(this._grip);
     }
 
-    // ---- settings sheet (⚙: 大小 + 颜色) -------------------------------
-    // An inline sheet, not a St.PopupMenu: a popup takes a shell grab, and
-    // grabs are exactly what makes touch unreliable here (see the click-gesture
-    // note in _attachRepeat).  A sheet inside the panel needs no grab at all,
-    // and it reflows the panel the same way a size change already does.
+    // ---- settings page (⚙) --------------------------------------------
+    // MIUIX-shaped, not a stack of button rows: a large title, then cards of
+    // rows.  Each row is [icon] [title over a hint] .... [value] [›], and tapping
+    // it reveals the controls that used to sit in the open -- one row at a time,
+    // so the page stays short on an 800px tablet and nothing has to be scrolled
+    // past to reach the bottom.
+    //
+    // Still not a St.PopupMenu: a popup takes a shell grab, and grabs are exactly
+    // what makes touch unreliable here (see the click-gesture note in
+    // _attachRepeat).
     _buildSettings() {
         this._settings = new St.BoxLayout({
             vertical: true,
             reactive: true,
-            visible: false,
-            style: settingsPanelStyle(this._scale),
+            visible: true,
+            style: settingsContentStyle(),
         });
         this._sectionLabels = [];
+        this._sections = {};
+        this._groups = [];
+        this._rows = [];
+        this._rowTitles = [];
+        this._rowHints = [];
+        this._rowTexts = [];
+        this._rowValues = [];
+        this._rowChevrons = [];
+        this._rowSeparators = [];
+        this._iconAreas = [];
 
+        this._pageTitle = new St.Label({
+            text: T('Settings'),
+            x_align: Clutter.ActorAlign.START,
+            style: settingsPageTitleStyle(this._scale),
+        });
+        this._settings.add_child(this._pageTitle);
+
+        // ---- 外观: size / theme / opacity / radius -------------------
+        const lookGroup = this._newGroup();
+
+        const sizeDetails = this._newSection(lookGroup, 'size',
+            T('Size'), T('Size hint'), 'size');
         const sizeRow = new St.BoxLayout({reactive: false});
-        sizeRow.add_child(this._sectionLabel(T('Size')));
         for (const step of this._steps) {
             const btn = new St.Button({
                 child: new St.Label({
@@ -1281,12 +1595,10 @@ export default class ErhaiOSK extends Extension {
             sizeRow.add_child(btn);
             this._sizeBtns[step.name] = btn;
         }
-        this._settings.add_child(sizeRow);
+        sizeDetails.add_child(sizeRow);
 
-        const colorRow = new St.BoxLayout({reactive: false});
-        colorRow.add_child(this._sectionLabel(T('Color')));
-        this._settings.add_child(colorRow);
-
+        const themeDetails = this._newSection(lookGroup, 'theme',
+            T('Theme'), T('Theme hint'), 'theme');
         this._themeGrid = new Clutter.GridLayout({
             column_spacing: Math.round(6 * this._scale),
             row_spacing: Math.round(6 * this._scale),
@@ -1296,8 +1608,9 @@ export default class ErhaiOSK extends Extension {
             reactive: false,
             x_expand: true,
         });
-        // One row: the cards share the width instead of wrapping 3 + 2.
-        this._themeCols = this._themes.length;
+        // Three across: the page is as wide as a phone, not as wide as the
+        // keyboard it belongs to, so five cards in one line squeezed the labels.
+        this._themeCols = 3;
         this._themes.forEach((theme, index) => {
             const btn = this._themeCard(theme);
             this._themeGrid.attach(btn,
@@ -1305,18 +1618,13 @@ export default class ErhaiOSK extends Extension {
                 Math.floor(index / this._themeCols), 1, 1);
             this._themeBtns[theme.name] = btn;
         });
-        this._settings.add_child(themeGrid);
+        themeDetails.add_child(themeGrid);
 
-        // 自定义配色: the shape of the Windows 11 picker, adapted to a sheet that
-        // lives inside the panel.  Two things cannot be copied: the code is
-        // typed on an in-panel 0-9A-F pad (nothing in top chrome can take the
-        // real keyboard), and 完成/取消 only close the sheet / put the palette
-        // back, because the keyboard behind the sheet is already the preview.
-        // The sheet is as wide as the keyboard, which is far wider than the
-        // picker (十二 chips at PICK_W).  Left-aligned it left a dead strip on the
-        // right twice the picker's width, so the block is centred instead -- with
-        // x_align CENTER the box keeps its natural width (the explicit sizes set
-        // by _syncCustomEditor) and the empty space is split either side.
+        // 自定义配色: the shape of the Windows 11 picker, adapted to a card.  Two
+        // things cannot be copied: the code is typed on an in-panel 0-9A-F pad
+        // (nothing in top chrome can take the real keyboard), and 完成/取消 only
+        // close the picker / put the palette back, because the keyboard behind
+        // the card is already the preview.
         this._customBox = new St.BoxLayout({
             vertical: true,
             reactive: false,
@@ -1369,9 +1677,9 @@ export default class ErhaiOSK extends Extension {
         this._customBox.add_child(paletteBox);
 
         // The spectrum: hue across, saturation down.  Size comes from
-        // _syncCustomEditor(), together with the palette pitch it has to line up
-        // with, so a size step keeps the block square-edged.  x_align START is
-        // what makes the box honour that width instead of filling the sheet.
+        // _syncCustomEditor(), together with the palette pitch it has to line
+        // up with, so a size step keeps the block square-edged.  x_align START
+        // is what makes the box honour that width instead of filling the card.
         this._spectrum = new St.DrawingArea({
             reactive: true,
             x_align: Clutter.ActorAlign.START,
@@ -1465,9 +1773,9 @@ export default class ErhaiOSK extends Extension {
         }
         this._customBox.add_child(this._hexPad);
 
-        // 完成 / 取消, as in the picker this copies.  完成 closes the sheet;
-        // 取消 puts the palette back, which only matters because every touch has
-        // already changed the keyboard behind the sheet.
+        // 完成 / 取消, as in the picker this copies.  完成 closes the page;
+        // 取消 puts the palette back, which only matters because every touch
+        // has already changed the keyboard behind the card.
         const doneRow = new St.BoxLayout({reactive: false});
         this._doneBtn = new St.Button({
             child: new St.Label({
@@ -1496,10 +1804,11 @@ export default class ErhaiOSK extends Extension {
         doneRow.add_child(this._revertBtn);
         this._customBox.add_child(doneRow);
 
-        this._settings.add_child(this._customBox);
+        themeDetails.add_child(this._customBox);
 
+        const opacityDetails = this._newSection(lookGroup, 'opacity',
+            T('Opacity'), T('Opacity hint'), 'opacity');
         const opacityRow = new St.BoxLayout({reactive: false});
-        opacityRow.add_child(this._sectionLabel(T('Opacity')));
         for (const step of OPACITY_STEPS) {
             const btn = new St.Button({
                 child: new St.Label({
@@ -1516,10 +1825,11 @@ export default class ErhaiOSK extends Extension {
             opacityRow.add_child(btn);
             this._opacityBtns[step.value] = btn;
         }
-        this._settings.add_child(opacityRow);
+        opacityDetails.add_child(opacityRow);
 
+        const radiusDetails = this._newSection(lookGroup, 'radius',
+            T('Radius'), T('Radius hint'), 'radius');
         const radiusRow = new St.BoxLayout({reactive: false});
-        radiusRow.add_child(this._sectionLabel(T('Radius')));
         for (const step of RADIUS_STEPS) {
             const btn = new St.Button({
                 child: new St.Label({
@@ -1536,20 +1846,308 @@ export default class ErhaiOSK extends Extension {
             radiusRow.add_child(btn);
             this._radiusBtns[step.value] = btn;
         }
-        this._settings.add_child(radiusRow);
+        radiusDetails.add_child(radiusRow);
 
-        // 背景 and 默认 rows.  The background row is (re)filled every time the
-        // sheet opens, and the reset button lives in its own row.
+        // ---- 背景 ---------------------------------------------------
+        const backgroundGroup = this._newGroup();
+        const backgroundDetails = this._newSection(backgroundGroup,
+            'background', T('Background'), T('Background hint'), 'background');
+        // Refilled every time the page opens, so a picture dropped into the
+        // folder shows up without a re-login.
         this._bgRow = new St.BoxLayout({reactive: false});
-        this._settings.add_child(this._bgRow);
-        this._buildResetRow();
+        backgroundDetails.add_child(this._bgRow);
+
+        // ---- 关于 ---------------------------------------------------
+        const aboutGroup = this._newGroup();
+        // The address the README hands out: a page that does not move when a
+        // repository or a package host does.  Release notes stay on GitHub,
+        // which is where the update announcements are written.
+        this._linkRow(aboutGroup, T('Project site'),
+            T('Project site hint'), 'website', 'https://mybailu.cn/osk/');
+        this._linkRow(aboutGroup, T('Release notes'),
+            T('Release notes hint'), 'update',
+            'https://github.com/HOSHINO61/ubuntu-pad-keyboard/releases');
+        const aboutDetails = this._newSection(aboutGroup, 'about',
+            T('About'), T('About hint'), 'info');
+        const versionRow = new St.BoxLayout({reactive: false});
+        this._versionLabel = new St.Label({
+            text: 'pad-osk 1.1',
+            x_align: Clutter.ActorAlign.START,
+            style: settingsRowHintStyle(this._scale),
+        });
+        versionRow.add_child(this._versionLabel);
+        aboutDetails.add_child(versionRow);
+        this._buildResetRow(aboutDetails);
+
+        // The separator after the last row of each card would be a stray line
+        // inside the rounded block; only the gaps between rows get one.
+        for (const group of this._groups) {
+            const seps = group._seps ?? [];
+            if (seps.length)
+                seps[seps.length - 1].visible = false;
+        }
 
         // The picker's two drawing areas have no natural size of their own: the
-        // sheet is built before anything calls _applyScale(), so give them theirs
+        // page is built before anything calls _applyScale(), so give them theirs
         // here or they allocate 0x0 and never paint.
         this._syncCustomEditor();
+        this._syncSectionValues();
 
-        this._box.add_child(this._settings);
+        // ---- the card: close button on top, scrolling body below ------
+        this._settingsCard = new St.BoxLayout({
+            vertical: true,
+            reactive: true,
+            visible: false,
+            x_align: Clutter.ActorAlign.START,
+            y_align: Clutter.ActorAlign.START,
+            style: settingsCardStyle(this._scale),
+        });
+
+        const header = new St.BoxLayout({reactive: false, x_expand: true});
+        header.add_child(new St.Widget({x_expand: true}));
+        this._settingsCloseBtn = new St.Button({
+            child: new St.Label({
+                text: '✕',
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+            style: settingsCloseBtnStyle(this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._settingsCloseBtn.connect('clicked', () => this._closeSettings());
+        header.add_child(this._settingsCloseBtn);
+        this._settingsCard.add_child(header);
+
+        // Height is set by _fitSettingsCard(); the view scrolls whatever does
+        // not fit, so an 800px tablet never loses the lower half of the page.
+        this._settingsScroll = new St.ScrollView({
+            reactive: true,
+            x_expand: true,
+            hscrollbar_policy: St.PolicyType.NEVER,
+            vscrollbar_policy: St.PolicyType.AUTOMATIC,
+        });
+        this._settingsScroll.set_child(this._settings);
+        this._settingsCard.add_child(this._settingsScroll);
+    }
+
+    // One card of rows, in the MIUIX shape: a rounded block of its own.
+    _newGroup() {
+        const group = new St.BoxLayout({
+            vertical: true,
+            reactive: false,
+            x_expand: true,
+            style: settingsGroupStyle(this._scale),
+        });
+        this._settings.add_child(group);
+        this._groups.push(group);
+        return group;
+    }
+
+    // The 1px hairline between two rows of a card.  Kept as its own helper so
+    // link rows can separate themselves the same way sections do.
+    _newSeparator(group) {
+        const separator = new St.Widget({
+            x_expand: true,
+            height: 1,
+            // Without this the vertical box hands the zero-preferred-height
+            // separator the group's leftover space and it paints a grey band
+            // over the last line of the hint.
+            y_align: Clutter.ActorAlign.START,
+            style: settingsSeparatorStyle(this._scale),
+        });
+        group.add_child(separator);
+        this._rowSeparators.push(separator);
+        if (!group._seps)
+            group._seps = [];
+        group._seps.push(separator);
+        return separator;
+    }
+
+    // A collapsed row plus the controls it hides.  Returns the box those
+    // controls go into.
+    _newSection(group, key, title, hint, icon) {
+        const {btn, value, chevron} = this._settingsRow(key, title, hint, icon);
+        group.add_child(btn);
+
+        const separator = this._newSeparator(group);
+
+        const details = new St.BoxLayout({
+            vertical: true,
+            reactive: false,
+            visible: false,
+            x_expand: true,
+            style: settingsDetailsStyle(this._scale),
+        });
+        group.add_child(details);
+
+        this._sections[key] = {btn, value, chevron, details, separator};
+        return details;
+    }
+
+    // icon | title+hint | value | ›
+    _settingsRow(key, title, hint, icon) {
+        const row = this._rowBase(title, hint, icon);
+        row.btn.connect('clicked', () => this._toggleSection(key));
+        return {btn: row.btn, value: row.value, chevron: row.chevron};
+    }
+
+    // A visitor row: same shape as a setting, but the chevron points out of the
+    // page and the click opens the browser instead of expanding controls.
+    _linkRow(group, title, hint, icon, url) {
+        const row = this._rowBase(title, hint, icon);
+        row.chevron.text = '↗';
+        row.btn.connect('clicked', () => {
+            try {
+                Gio.AppInfo.launch_default_for_uri(url, null);
+            } catch (e) {
+                log(`pad-osk: open ${url} failed: ${e}`);
+            }
+        });
+        group.add_child(row.btn);
+        this._newSeparator(group);
+        return row;
+    }
+
+    _rowBase(title, hint, icon) {
+        const scale = this._scale;
+        const iconArea = new St.DrawingArea({
+            reactive: false,
+            width: Math.round(30 * scale),
+            height: Math.round(30 * scale),
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        iconArea.connect('repaint', () => paintSettingIcon(iconArea, icon));
+        this._iconAreas.push({area: iconArea, kind: icon});
+
+        const texts = new St.BoxLayout({
+            vertical: true,
+            reactive: false,
+            x_expand: true,
+        });
+        const titleLabel = new St.Label({
+            text: title,
+            x_align: Clutter.ActorAlign.START,
+            style: settingsRowTitleStyle(scale),
+        });
+        const hintLabel = new St.Label({
+            text: hint,
+            x_align: Clutter.ActorAlign.START,
+            style: settingsRowHintStyle(scale),
+        });
+        texts.add_child(titleLabel);
+        texts.add_child(hintLabel);
+        this._rowTitles.push(titleLabel);
+        this._rowHints.push(hintLabel);
+
+        const value = new St.Label({
+            text: '',
+            y_align: Clutter.ActorAlign.CENTER,
+            style: settingsRowValueStyle(scale),
+        });
+        const chevron = new St.Label({
+            text: '›',
+            y_align: Clutter.ActorAlign.CENTER,
+            style: settingsRowChevronStyle(scale),
+        });
+        this._rowValues.push(value);
+        this._rowChevrons.push(chevron);
+
+        const content = new St.BoxLayout({
+            reactive: false,
+            x_expand: true,
+        });
+        content.add_child(iconArea);
+        content.add_child(texts);
+        content.add_child(value);
+        content.add_child(chevron);
+
+        const btn = new St.Button({
+            child: content,
+            style: settingsRowStyle(scale),
+            reactive: true,
+            x_expand: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._rows.push(btn);
+        return {btn, value, chevron};
+    }
+
+    _toggleSection(key) {
+        const target = this._sections?.[key];
+        if (!target)
+            return;
+        const open = !target.details.visible;
+        for (const [name, section] of Object.entries(this._sections)) {
+            const shown = name === key && open;
+            section.details.visible = shown;
+            section.chevron.text = shown ? '⌄' : '›';
+        }
+        this._scheduleSettingsLayout(true);
+    }
+
+    // The value at the right of each row: the setting's current state in one
+    // word, so the row answers "what is it now" without being opened.
+    _syncSectionValues() {
+        if (!this._sections)
+            return;
+        const step = findStep(this._steps, this._sizeName);
+        this._setSectionValue('size', T(step ? step.label : this._sizeName));
+        const theme = this._themes.find(t => t.name === this._themeName);
+        this._setSectionValue('theme', T(theme ? theme.label : this._themeName));
+        this._setSectionValue('opacity', `${Math.round(this._opacity * 100)}%`);
+        const radius = RADIUS_STEPS.find(
+            s => Math.abs(s.value - this._radius) < 0.001);
+        this._setSectionValue('radius', radius ? T(radius.label) : '');
+        this._setSectionValue('background', this._backgroundValueText());
+        this._setSectionValue('about', '');
+    }
+
+    _setSectionValue(key, text) {
+        const section = this._sections?.[key];
+        if (section && section.value)
+            section.value.text = text;
+    }
+
+    _backgroundValueText() {
+        if (!this._backgroundOn || !this._background)
+            return T('None');
+        const base = this._background.split('/').pop();
+        return base.length > 18 ? `${base.slice(0, 16)}…` : base;
+    }
+
+    // Restyle everything the page draws itself: the CSS classes are built from
+    // the scale, so a size step has to be pushed through them again.
+    _syncSettingsChrome() {
+        const scale = this._scale;
+        if (this._pageTitle)
+            this._pageTitle.style = settingsPageTitleStyle(scale);
+        if (this._versionLabel)
+            this._versionLabel.style = settingsRowHintStyle(scale);
+        for (const group of this._groups ?? [])
+            group.style = settingsGroupStyle(scale);
+        for (const row of this._rows ?? [])
+            row.style = settingsRowStyle(scale);
+        for (const label of this._rowTitles ?? [])
+            label.style = settingsRowTitleStyle(scale);
+        for (const label of this._rowHints ?? [])
+            label.style = settingsRowHintStyle(scale);
+        for (const label of this._rowValues ?? [])
+            label.style = settingsRowValueStyle(scale);
+        for (const label of this._rowChevrons ?? [])
+            label.style = settingsRowChevronStyle(scale);
+        if (this._settingsCloseBtn)
+            this._settingsCloseBtn.style = settingsCloseBtnStyle(scale);
+        for (const separator of this._rowSeparators ?? [])
+            separator.style = settingsSeparatorStyle(scale);
+        for (const section of Object.values(this._sections ?? {}))
+            section.details.style = settingsDetailsStyle(scale);
+        for (const {area, kind} of this._iconAreas ?? []) {
+            area.set_width(Math.round(30 * scale));
+            area.set_height(Math.round(30 * scale));
+            area.queue_repaint();
+        }
     }
 
     // ---- backdrop + reset -------------------------------------------
@@ -1930,6 +2528,8 @@ export default class ErhaiOSK extends Extension {
             }
             this._bgRow.add_child(group);
         }
+        // One more picture is one more button row: the card must re-measure.
+        this._scheduleSettingsLayout(true);
     }
 
     // Deleting a file is destructive and a tablet tap is easy to misfire, so
@@ -2053,9 +2653,7 @@ export default class ErhaiOSK extends Extension {
         }
     }
 
-    _buildResetRow() {
-        const row = new St.BoxLayout({reactive: false});
-        row.add_child(this._sectionLabel(T('Defaults')));
+    _buildResetRow(parent) {
         this._resetBtn = new St.Button({
             child: new St.Label({
                 text: T('Reset to defaults'),
@@ -2067,8 +2665,7 @@ export default class ErhaiOSK extends Extension {
             track_hover: true,
         });
         this._resetBtn.connect('clicked', () => this._resetDefaults());
-        row.add_child(this._resetBtn);
-        this._settings.add_child(row);
+        parent.add_child(this._resetBtn);
     }
 
     // Back to the shipping look and the default spot: medium, graphite, fully
@@ -2120,8 +2717,7 @@ export default class ErhaiOSK extends Extension {
             this._closeSettings();
             return;
         }
-        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
-        // Only one sheet at a time: opening settings puts emoji away.
+        // Only one surface at a time: opening settings puts emoji away.
         this._closeEmoji(false);
         // Re-scan the backgrounds folder on every open: dropping a new image in
         // must not require a re-login.
@@ -2132,8 +2728,10 @@ export default class ErhaiOSK extends Extension {
         this._hexInput = null;
         this._syncCustomEditor();
         this._settingsOpen = true;
-        this._settings.visible = true;
-        this._reflow(oldHeight);
+        this._settingsCard.visible = true;
+        // No reflow: the keyboard keeps its height, the card is placed on its
+        // own.
+        this._scheduleSettingsLayout(true);
     }
 
     // ---- emoji layer --------------------------------------------------
@@ -2321,20 +2919,22 @@ export default class ErhaiOSK extends Extension {
         this._updateVisuals();
     }
 
-    // Collapsing the panel or hiding the keyboard both put the sheet away, so a
-    // sheet is never left open on top of a keyboard that is not on screen.
-    // Callers that reflow themselves pass `false`: two pending reflows would
-    // each shift the panel by a height the other already accounted for.
-    _closeSettings(reflow = true) {
+    // Collapsing the panel or hiding the keyboard both put the card away, so a
+    // card is never left floating over an application with no keyboard under
+    // it.  The parameter is kept for the old call sites: the card no longer
+    // changes the slab's height, so there is nothing left to reflow.
+    _closeSettings(_reflow = true) {
         if (!this._settings || !this._settingsOpen)
             return;
         this._cancelDeleteBackground(false);
         this._bgMode = 'pick';
-        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._settingsOpen = false;
-        this._settings.visible = false;
-        if (reflow)
-            this._reflow(oldHeight);
+        if (this._settingsCard)
+            this._settingsCard.visible = false;
+        if (this._settingsLayoutId) {
+            GLib.source_remove(this._settingsLayoutId);
+            this._settingsLayoutId = 0;
+        }
     }
 
     // ---- custom palette (调色板 / 取色器 / 色号) ------------------------
@@ -2448,13 +3048,13 @@ export default class ErhaiOSK extends Extension {
         if (!this._hexPad)
             return;
         const show = !this._hexPad.visible;
-        const [, oldHeight] = this._box ? this._box.get_size() : [0, 0];
         this._hexPad.visible = show;
         // Opening the pad always starts a fresh code for the current role,
         // prefilled with nothing: the readout already shows the colour in use.
         this._hexInput = show ? '' : null;
         this._syncCustomEditor();
-        this._reflow(oldHeight);
+        // The pad changes the card's height: re-measure and re-place it.
+        this._scheduleSettingsLayout(true);
     }
 
     // Six digits and it applies by itself -- no 应用 button to forget.
@@ -2854,7 +3454,13 @@ export default class ErhaiOSK extends Extension {
         if (this._closeBtn)
             this._closeBtn.style = closeBtnStyle(s);
         if (this._settings)
-            this._settings.style = settingsPanelStyle(s);
+            this._settings.style = settingsContentStyle();
+        if (this._settingsCard)
+            this._settingsCard.style = settingsCardStyle(s);
+        if (this._settingsCloseBtn)
+            this._settingsCloseBtn.style = closeBtnStyle(s);
+        this._syncSettingsChrome();
+        this._syncSectionValues();
         for (const label of this._sectionLabels ?? [])
             label.style = sectionLabelStyle(s);
         for (const {btn, kind, minW, mod} of this._styledKeys) {
@@ -2878,6 +3484,10 @@ export default class ErhaiOSK extends Extension {
         this._styleIfAlive(this._emojiPrev, gripBtnStyle(s));
         this._styleIfAlive(this._emojiNext, gripBtnStyle(s));
         this._styleIfAlive(this._emojiPageLabel, sectionLabelStyle(s));
+        // Contents changed size (labels, chips, the sheet's own metrics), so the
+        // floating card has to re-measure and re-place itself.
+        if (this._settingsOpen)
+            this._scheduleSettingsLayout(true);
     }
 
     // A button kept in a member can be destroyed by a row rebuild; touching a
@@ -3451,8 +4061,19 @@ export default class ErhaiOSK extends Extension {
     _placeIfNeeded() {
         if (this._placed || !this._box)
             return;
+        // Not until the keys exist: the panel is allocated once with the grip
+        // alone while the rows are still being built, and placing on that
+        // measurement pins a 263x66 keyboard to the remembered spot for the
+        // rest of the session.
+        if (!this._rowsBox || this._rowsBox.get_n_children() === 0)
+            return;
         const [w, h] = this._box.get_size();
         if (w <= 0 || h <= 0)
+            return;
+        // A grip-only allocation: the rows exist but have not been laid out yet,
+        // so this measurement is the bar, not the keyboard.
+        const mon = Main.layoutManager.primaryMonitor;
+        if (mon && mon.width && w < mon.width * 0.3)
             return;
         this._placed = true;
 
@@ -3461,7 +4082,6 @@ export default class ErhaiOSK extends Extension {
             this._applyPosition(saved.x, saved.y);
         else
             this._placeDefault();
-        log(`pad-osk: placed at ${this._posX},${this._posY} size ${w}x${h}`);
     }
 
     _placeDefault() {
@@ -3470,6 +4090,154 @@ export default class ErhaiOSK extends Extension {
         this._applyPosition(
             mon.x + Math.round((mon.width - w) / 2),
             mon.y + mon.height - h - 24);
+    }
+
+    // ---- settings card geometry ---------------------------------------
+    // Work area of the monitor the keyboard is on: the top bar belongs to the
+    // monitor but not to the desktop, and that difference is exactly what used
+    // to swallow the size row when the sheet grew until it touched the top.
+    _workArea(mon) {
+        try {
+            const area = Main.layoutManager.getWorkAreaForMonitor(mon.index);
+            if (area && area.width > 0 && area.height > 0)
+                return area;
+        } catch (e) {
+            log(`pad-osk: work area failed: ${e}`);
+        }
+        return {x: mon.x, y: mon.y, width: mon.width, height: mon.height};
+    }
+
+    // Where the card can go: the gap above the keyboard against the gap below
+    // it, in desktop coordinates (the top bar is part of the monitor but not of
+    // the desktop).  The larger gap wins and its height becomes the card's
+    // ceiling -- a card that keeps clear of the keyboard is worth more than one
+    // that shows everything at once.
+    _settingsRoom(area) {
+        const margin = 8;
+        const gap = 10;
+        const [kbW, kbH] = this._box ? this._box.get_size() : [0, 0];
+        // get_size() reports the allocation, which can sit one row short of the
+        // rows it holds while the layout settles; the preferred height is what
+        // the keyboard actually paints, so take the larger of the two when the
+        // card has to clear it.
+        let height = kbH;
+        if (this._box) {
+            const pref = this._box.get_preferred_height(kbW || -1)[1];
+            if (pref > height)
+                height = pref;
+        }
+        // Where the panel really is on screen.  The remembered position is what
+        // was asked for, not what the compositor did with it: placing the card
+        // from the record left it lying across the bottom row of keys.
+        let kbX = this._posX;
+        let kbY = this._posY;
+        if (this._box) {
+            const [ax, ay] = this._box.get_transformed_position();
+            if (Number.isFinite(ax) && Number.isFinite(ay)) {
+                kbX = ax;
+                kbY = ay;
+            }
+        }
+        const above = kbY - area.y - margin - gap;
+        const below = area.y + area.height - (kbY + height) - margin - gap;
+        return {
+            kbX,
+            kbY,
+            kbW,
+            kbH: height,
+            rawH: kbH,
+            above,
+            below,
+            preferAbove: above >= below,
+            room: Math.max(above, below),
+        };
+    }
+
+    _fitSettingsCard() {
+        if (!this._settingsCard || !this._settingsOpen)
+            return;
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon)
+            return;
+        const area = this._workArea(mon);
+        const space = this._settingsRoom(area);
+        const pad = Math.round(10 * this._scale);
+        const maxW = Math.max(320, area.width - 24);
+        // A page as wide as a phone, not as wide as the keyboard it belongs to:
+        // the rows are built to be read one line at a time, and a 1054px card
+        // left the value and the chevron marooned on the right.
+        const width = Math.max(380,
+            Math.min(maxW, Math.round(600 * this._scale)));
+        this._settingsCard.set_width(width);
+
+        const header = this._settingsCard.get_child_at_index(0);
+        const headerH = header ? header.get_preferred_height(width)[1] : 0;
+        const innerW = Math.max(120, width - 2 * pad);
+        const natural = this._settings.get_preferred_height(innerW)[1] ?? 0;
+        if (natural <= 0)
+            return;
+        // Keyboard covering nearly the whole desktop leaves no side to stand on,
+        // so the card gets the work area and scrolls inside it.
+        const ceiling = space.room > 220
+            ? Math.max(160, space.room - 6)
+            : area.height - 24;
+        const scrollH = Math.min(natural,
+            Math.max(120, ceiling - headerH - 2 * pad));
+        this._settingsScroll.set_height(scrollH);
+    }
+
+    _placeSettings() {
+        if (!this._settingsCard || !this._settingsOpen || !this._box)
+            return;
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon)
+            return;
+        const area = this._workArea(mon);
+        const space = this._settingsRoom(area);
+        let [w, h] = this._settingsCard.get_size();
+        if (w <= 0 || h <= 0) {
+            w = this._settingsCard.width || Math.round(area.width * 0.5);
+            h = this._settingsCard.get_preferred_height(w)[1] ?? 0;
+        }
+        if (w <= 0 || h <= 0)
+            return;
+        const margin = 8;
+        const gap = 10;
+        // Centred on the keyboard, kept inside the desktop even when the
+        // keyboard itself is half off-screen.
+        const x = Math.max(area.x + margin,
+            Math.min(Math.round(space.kbX + (space.kbW - w) / 2),
+                area.x + area.width - w - margin));
+        let y;
+        if (space.preferAbove && space.above >= h)
+            y = space.kbY - h - gap;
+        else if (space.below >= h)
+            y = space.kbY + space.kbH + gap;
+        else if (space.above >= h)
+            y = space.kbY - h - gap;
+        else
+            y = area.y + Math.round((area.height - h) / 2);
+        y = Math.max(area.y + margin,
+            Math.min(Math.round(y), area.y + area.height - h - margin));
+        this._settingsCard.set_translation(x, y, 0);
+    }
+
+    // Measuring needs an allocation, and one idle is not always enough, so the
+    // fitted layout places itself again on the next frame.
+    _scheduleSettingsLayout(fit) {
+        if (!this._settingsOpen || this._settingsLayoutId)
+            return;
+        this._settingsLayoutId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._settingsLayoutId = 0;
+            if (!this._settingsOpen)
+                return GLib.SOURCE_REMOVE;
+            if (fit)
+                this._fitSettingsCard();
+            this._placeSettings();
+            if (fit)
+                this._scheduleSettingsLayout(false);
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _applyPosition(x, y) {
@@ -3486,6 +4254,9 @@ export default class ErhaiOSK extends Extension {
         this._posX = nx;
         this._posY = ny;
         this._box.set_translation(nx, ny, 0);
+        // The card follows the keyboard it was detached from.
+        if (this._settingsOpen)
+            this._placeSettings();
     }
 
     // A rotation, a different primary display or a resolution change moves the
