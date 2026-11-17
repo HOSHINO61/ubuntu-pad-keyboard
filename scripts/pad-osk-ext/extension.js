@@ -21,7 +21,12 @@
 //   * notify_keyval(keysym) does NOT apply the shift level: passing the keysym
 //     for '!' typed '1'.  Shifted glyphs must be emitted as the base key plus a
 //     real Shift press.
+//   * GJS 1.88's cairo module has no Context.createLinearGradient: gradients are
+//     constructed directly (new cairo.LinearGradient(x0, y0, x1, y1), then
+//     addColorStopRGB on it).  The old factory-method spelling throws "is not a
+//     function" at paint time, inside the shell, with nothing on screen.
 
+import cairo from 'gi://cairo';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -310,9 +315,13 @@ const PALETTE = [
 const PALETTE_COLS = 12;
 const CHIP_PX = 30;
 const CHIP_GAP_PX = 4;
+// The chip outline is drawn *outside* the CSS width, so it adds to the pitch.
+// Leaving it out of PICK_W made the palette row ~1 border wider per chip than
+// the spectrum below it, and the right edge came out ragged.
+const CHIP_BORDER_PX = 2;
 // Width of the picker block: twelve chips wide, so the spectrum, the brightness
 // bar and the palette share one straight edge.
-const PICK_W = PALETTE_COLS * (CHIP_PX + CHIP_GAP_PX);
+const PICK_W = PALETTE_COLS * (CHIP_PX + 2 * CHIP_BORDER_PX + CHIP_GAP_PX);
 const SPECTRUM_H = 170;
 const VALUE_H = 20;
 // The bar is painted below a transparent strip, because the gap between the
@@ -395,7 +404,7 @@ const paintSpectrum = (area, hsv) => {
     const cr = area.get_context();
     const [width, height] = area.get_surface_size();
     if (width > 0 && height > 0) {
-        const across = cr.createLinearGradient(0, 0, width, 0);
+        const across = new cairo.LinearGradient(0, 0, width, 0);
         for (let i = 0; i <= 6; i++) {
             const [r, g, b] = hsvToRgb255(i * 60, 1, 1).map(c => c / 255);
             across.addColorStopRGB(i / 6, r, g, b);
@@ -404,7 +413,7 @@ const paintSpectrum = (area, hsv) => {
         cr.rectangle(0, 0, width, height);
         cr.fill();
 
-        const down = cr.createLinearGradient(0, 0, 0, height);
+        const down = new cairo.LinearGradient(0, 0, 0, height);
         down.addColorStopRGBA(0, 1, 1, 1, 0);
         down.addColorStopRGBA(1, 1, 1, 1, 1);
         cr.setSource(down);
@@ -412,9 +421,13 @@ const paintSpectrum = (area, hsv) => {
         cr.fill();
 
         const radius = Math.max(4, Math.round(Math.min(width, height) / 12));
+        // Clamped inwards so the ring stays whole: at s=0 it sits on the bottom
+        // edge and half of it used to be cut off by the surface.
         paintRing(cr,
-            ((((hsv.h % 360) + 360) % 360) / 360) * width,
-            (1 - Math.max(0, Math.min(1, hsv.s))) * height, radius);
+            Math.max(radius + 1, Math.min(width - radius - 1,
+                ((((hsv.h % 360) + 360) % 360) / 360) * width)),
+            Math.max(radius + 1, Math.min(height - radius - 1,
+                (1 - Math.max(0, Math.min(1, hsv.s))) * height)), radius);
     }
     cr.$dispose();
 };
@@ -431,7 +444,7 @@ const paintValueBar = (area, hsv) => {
     const barHeight = height - gap;
     if (width > 0 && barHeight > 1) {
         const [r, g, b] = hsvToRgb255(hsv.h, hsv.s, 1).map(c => c / 255);
-        const grad = cr.createLinearGradient(0, 0, width, 0);
+        const grad = new cairo.LinearGradient(0, 0, width, 0);
         grad.addColorStopRGB(0, 0, 0, 0);
         grad.addColorStopRGB(1, r, g, b);
         cr.setSource(grad);
@@ -440,14 +453,15 @@ const paintValueBar = (area, hsv) => {
 
         const x = Math.max(0, Math.min(1, hsv.v)) * width;
         const radius = Math.max(3, Math.round(barHeight * 0.42));
+        const cx = Math.max(radius + 1, Math.min(width - radius - 1, x));
         const cy = gap + barHeight / 2;
         cr.setLineWidth(3);
         cr.setSourceRGBA(0, 0, 0, 0.55);
-        cr.arc(x, cy, radius, 0, 2 * Math.PI);
+        cr.arc(cx, cy, radius, 0, 2 * Math.PI);
         cr.stroke();
         cr.setLineWidth(2);
         cr.setSourceRGBA(1, 1, 1, 0.95);
-        cr.arc(x, cy, radius, 0, 2 * Math.PI);
+        cr.arc(cx, cy, radius, 0, 2 * Math.PI);
         cr.stroke();
     }
     cr.$dispose();
@@ -466,7 +480,7 @@ const paletteChipStyle = (color, active, scale) => {
             ? 'rgba(255,255,255,0.38)'
             : shade(color, -0.35);
     return `background-color: ${color};`
-        + ` border: ${px(2, scale)} solid ${active ? THEME.accent : edge};`
+        + ` border: ${px(CHIP_BORDER_PX, scale)} solid ${active ? THEME.accent : edge};`
         + ` border-radius: ${pxSoft(6, scale)};`
         + ` width: ${size}px; height: ${size}px;`
         + ` padding: 0; margin: ${px(CHIP_GAP_PX / 2, scale)};`;
@@ -655,6 +669,25 @@ const themeChipStyle = (color, wide, scale) =>
     + ` width: ${Math.round((wide ? 28 : 13) * scale)}px;`
     + ` height: ${Math.round(13 * scale)}px;`
     + ` margin: ${px(2, scale)};`;
+
+// The card paints itself in the panel colour, so anything written on it has to
+// contrast with the *panel*, not with the key colour.  theme.key[1] used to be
+// used for this and works for the four presets only because their key and panel
+// brightness agree; a custom palette can pair a white panel with a dark key
+// whose glyph colour is white, and then the name is white on white.
+const panelFgFor = theme => {
+    const panel = String(theme.panel ?? '');
+    // theme.panel is 'r,g,b' for the presets and '#rrggbb' for the custom
+    // palette; a bare rrggbb is accepted too so this never silently turns into
+    // black (which would put white on white again).
+    const hex = /^#/.test(panel) ? panel
+        : /^[0-9a-f]{6}$/i.test(panel) ? `#${panel}`
+        : `#${panel.split(',').map(v => {
+            const n = Math.max(0, Math.min(255, Math.round(Number(v) || 0)));
+            return n.toString(16).padStart(2, '0');
+        }).join('')}`;
+    return fgFor(hex);
+};
 
 // The settings sheet sits inside the panel, so it needs its own tint to read as
 // a separate surface; panelAlt is that tint per theme.
@@ -1279,11 +1312,16 @@ export default class ErhaiOSK extends Extension {
         // typed on an in-panel 0-9A-F pad (nothing in top chrome can take the
         // real keyboard), and 完成/取消 only close the sheet / put the palette
         // back, because the keyboard behind the sheet is already the preview.
+        // The sheet is as wide as the keyboard, which is far wider than the
+        // picker (十二 chips at PICK_W).  Left-aligned it left a dead strip on the
+        // right twice the picker's width, so the block is centred instead -- with
+        // x_align CENTER the box keeps its natural width (the explicit sizes set
+        // by _syncCustomEditor) and the empty space is split either side.
         this._customBox = new St.BoxLayout({
             vertical: true,
             reactive: false,
             x_expand: false,
-            x_align: Clutter.ActorAlign.START,
+            x_align: Clutter.ActorAlign.CENTER,
             visible: this._themeName === CUSTOM_THEME,
         });
 
@@ -2309,7 +2347,11 @@ export default class ErhaiOSK extends Extension {
         const point = event => {
             const [stageX, stageY] = this._coords(event);
             const [areaX, areaY] = area.get_transformed_position();
-            const [width, height] = area.get_surface_size();
+            // get_surface_size() is only valid inside a repaint -- the cairo
+            // surface lives just for the paint and reads 0x0 from an event
+            // handler, which swallowed every press.  The actor allocation is
+            // what the surface is sized from, so use that.
+            const [width, height] = [area.width, area.height];
             if (width <= 0 || height <= 0)
                 return Clutter.EVENT_STOP;
             onPoint(
@@ -2590,7 +2632,7 @@ export default class ErhaiOSK extends Extension {
 
         content.add_child(new St.Label({
             text: T(theme.label),
-            style: `color: ${theme.key[1]}; font-size: ${px(13, s)};`,
+            style: `color: ${panelFgFor(theme)}; font-size: ${px(13, s)};`,
             x_align: Clutter.ActorAlign.CENTER,
             y_align: Clutter.ActorAlign.CENTER,
         }));
@@ -3478,7 +3520,13 @@ export default class ErhaiOSK extends Extension {
     // ---- dragging ----------------------------------------------------
     _coords(event) {
         const c = event.get_coords();
-        return c.length === 3 ? [c[1], c[2]] : c;
+        let [x, y] = c.length === 3 ? [c[1], c[2]] : c;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            // Some event kinds give no usable coords through get_coords();
+            // the stage pointer always knows where the finger/mouse is.
+            [x, y] = global.get_pointer();
+        }
+        return [x, y];
     }
 
     _startDrag(event) {
