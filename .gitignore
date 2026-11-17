@@ -23,3 +23,7 @@ desktop.ini
 /_*.py
 /_shots/
 /*.corrupt.bak
+
+# 网站源码与站点说明不进仓库：/docs/ 与 /WEBSITE.md 单独维护、单独发布
+/docs/
+/WEBSITE.md
