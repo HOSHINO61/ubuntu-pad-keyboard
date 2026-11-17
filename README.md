@@ -302,17 +302,17 @@ background=/home/user/图片/星空.webp
 下面展开五行色块（1.1 已把这块换成取色器，见上面「自定义配色」）；这张用的是
 自定义配色（蓝 + 米白）：
 
-![PAD-OSK 1.0.2 设置面板](docs/images/keyboard-v1.0.2-settings.png)
+![PAD-OSK 1.0.2 设置面板](https://mybailu.cn/osk/assets/img/v1.0.2-settings.webp)
 
 「中」档（默认）——Quick Settings 里能看到「屏幕键盘」开关，WiFi 名称已打码：
 
-![Quick Settings 里的屏幕键盘开关（中档）](docs/images/keyboard-quick-settings.png)
+![Quick Settings 里的屏幕键盘开关（中档）](https://mybailu.cn/osk/assets/img/quick-settings.webp)
 
 三档尺寸（`⚙` 设置面板里选，当前档填充高亮）：
 
 | 小（55%） | 中（66%） | 大（76%） |
 |---|---|---|
-| ![小](docs/images/keyboard-v1.0-size-small.png) | ![中](docs/images/keyboard-v1.0-size-medium.png) | ![大](docs/images/keyboard-v1.0-size-large.png) |
+| ![小](https://mybailu.cn/osk/assets/img/v1.0-size-small.webp) | ![中](https://mybailu.cn/osk/assets/img/v1.0-size-medium.webp) | ![大](https://mybailu.cn/osk/assets/img/v1.0-size-large.webp) |
 
 三张都是同一套外观（浅色、100% 透明、圆角大、无背景），差别只在尺寸。
 
@@ -329,7 +329,7 @@ background=/home/user/图片/星空.webp
 
 ## 表情
 
-![表情层：字母区被表情网格顶替，底部那行保留](docs/images/keyboard-v1.0.1-emoji.png)
+![表情层：字母区被表情网格顶替，底部那行保留](https://mybailu.cn/osk/assets/img/v1.0.1-emoji.webp)
 
 底部多了一个 `😀` 键。点它是**换层**，不是弹窗：上面四行字母被表情网格顶替，底部那行
 （空格 / 回车 / 😀 / 方向键）留着，再点 😀 就切回字母。三页、每页 32 个，`‹ 1/3 ›`
@@ -442,16 +442,17 @@ scripts/
   pad-osk-toggle.sh 应用图标调用的开关脚本
   pad-osk.desktop   应用抽屉入口
   sync-github.sh             把 master 重放为 GitHub 身份并强推（见下文）
-docs/
-  屏幕键盘-方案.md            完整方案：逐条排查、实现细节、全部踩坑
 ```
+
+站点（`mybailu.cn/osk/`）、截图与完整方案 md 不在本仓库里：它们由网站自己维护，
+仓库只放扩展源码、po、打包脚本和 .deb。
 
 ---
 
 ## 实现要点（踩过的坑）
 
-这些是实际调试中踩出来并修掉的，详细记录见
-[`docs/屏幕键盘-方案.md`](docs/屏幕键盘-方案.md)：
+这些是实际调试中踩出来并修掉的，完整记录在站点的
+[技术方案页](https://mybailu.cn/osk/tech.html)：
 
 1. **`addTopChrome(actor, params)` 不能传 `affectsInputRegion`**
    GNOME 50 已移除该参数。传了会抛异常，但 actor **已经半加入** chrome 层，
@@ -511,7 +512,7 @@ docs/
 ## 相关文档
 
 - [Ubuntu for OnePlus Pad 2 Pro](https://github.com/yzddmr6/onepluspad-2pro-mainline/blob/main/README.zh-CN.md) —— 上游：设备适配、分区与系统安装
-- [`docs/屏幕键盘-方案.md`](docs/屏幕键盘-方案.md) —— 完整技术方案与踩坑记录
+- [技术方案页](https://mybailu.cn/osk/tech.html) —— 完整方案与踩坑记录（随站点维护，不在本仓库）
 - [`packaging/README.md`](packaging/README.md) —— 打包说明
 
 ## 许可
