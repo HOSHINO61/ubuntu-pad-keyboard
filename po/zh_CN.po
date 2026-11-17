@@ -171,4 +171,4 @@ msgid "Author"
 msgstr "作者酷安"
 
 msgid "Author hint"
-msgstr "访问作者主页，看更新与答疑"
+msgstr "访问作者主页"

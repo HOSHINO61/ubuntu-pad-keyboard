@@ -1971,6 +1971,8 @@ export default class ErhaiOSK extends Extension {
         this._linkRow(linkGroup, T('Release notes'),
             T('Release notes hint'), 'update',
             'https://github.com/HOSHINO61/ubuntu-pad-keyboard/releases');
+        // The credit line keeps a one-word subtitle: it is the last row of the
+        // block, and the logo already says whose page it opens.
         this._linkRow(linkGroup, T('Author'), T('Author hint'), COOLAPK_LOGO,
             'https://www.coolapk.com/u/41024424');
 
@@ -2146,16 +2148,20 @@ export default class ErhaiOSK extends Extension {
             x_align: Clutter.ActorAlign.START,
             style: settingsRowTitleStyle(scale),
         });
-        const hintLabel = new St.Label({
-            text: hint,
-            x_align: Clutter.ActorAlign.START,
-            style: settingsRowHintStyle(scale),
-        });
+        // A row may carry only a title.  Some visitors are self-explanatory
+        // (the Coolapk line), and a second line there is just noise -- and an
+        // empty St.Label would still reserve the hint's line height.
         texts.add_child(titleLabel);
-        texts.add_child(hintLabel);
         this._rowTitles.push(titleLabel);
-        this._rowHints.push(hintLabel);
-
+        if (hint) {
+            const hintLabel = new St.Label({
+                text: hint,
+                x_align: Clutter.ActorAlign.START,
+                style: settingsRowHintStyle(scale),
+            });
+            texts.add_child(hintLabel);
+            this._rowHints.push(hintLabel);
+        }
         const value = new St.Label({
             text: '',
             y_align: Clutter.ActorAlign.CENTER,
