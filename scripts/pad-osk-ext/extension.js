@@ -39,6 +39,12 @@ import * as ShellExtension from 'resource:///org/gnome/shell/extensions/extensio
 
 const Extension = ShellExtension.Extension;
 
+// A brand mark is shipped as a picture next to this file and keeps its own
+// colours; the drawn icons below are monochrome line art.
+const EXTENSION_DIR = GLib.path_get_dirname(
+    GLib.filename_from_uri(import.meta.url)[0]);
+const COOLAPK_LOGO = GLib.build_filenamev([EXTENSION_DIR, 'icons', 'coolapk.png']);
+
 // ---- translations ----------------------------------------------------
 // Every user-visible string below is written in English as the msgid and looked
 // up at render time through T().
@@ -602,6 +608,10 @@ const paintSettingIcon = (area, kind) => {
         cr.lineTo(half * 0.9, half * 0.55);
         cr.stroke();
         break;
+    case 'author': {
+        // Unused: the Coolapk mark is a shipped PNG, painted by St.Icon.
+        break;
+    }
     default:
         cr.arc(0, 0, half, 0, Math.PI * 2);
         cr.stroke();
@@ -1882,6 +1892,11 @@ export default class ErhaiOSK extends Extension {
         aboutDetails.add_child(versionRow);
         this._buildResetRow(aboutDetails);
 
+        // Credit line last, so it sits under 关于: the Coolapk profile is where
+        // the tablet crowd actually finds the project and its updates.
+        this._linkRow(aboutGroup, T('Author'), T('Author hint'), COOLAPK_LOGO,
+            'https://www.coolapk.com/u/41024424');
+
         // The separator after the last row of each card would be a stray line
         // inside the rounded block; only the gaps between rows get one.
         for (const group of this._groups) {
@@ -2014,14 +2029,33 @@ export default class ErhaiOSK extends Extension {
 
     _rowBase(title, hint, icon) {
         const scale = this._scale;
-        const iconArea = new St.DrawingArea({
-            reactive: false,
-            width: Math.round(30 * scale),
-            height: Math.round(30 * scale),
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        iconArea.connect('repaint', () => paintSettingIcon(iconArea, icon));
-        this._iconAreas.push({area: iconArea, kind: icon});
+        const box = Math.round(30 * scale);
+        let iconActor;
+        // A brand mark ships as a picture and keeps its own colours; drawn
+        // icons are monochrome line art on a transparent surface.
+        if (typeof icon === 'string' && icon.startsWith('/')) {
+            iconActor = new St.Bin({
+                width: box,
+                height: box,
+                y_align: Clutter.ActorAlign.CENTER,
+                child: new St.Icon({
+                    gicon: Gio.icon_new_for_string(icon),
+                    icon_size: Math.round(box * 0.82),
+                    x_align: Clutter.ActorAlign.CENTER,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }),
+            });
+        } else {
+            const iconArea = new St.DrawingArea({
+                reactive: false,
+                width: box,
+                height: box,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            iconArea.connect('repaint', () => paintSettingIcon(iconArea, icon));
+            this._iconAreas.push({area: iconArea, kind: icon});
+            iconActor = iconArea;
+        }
 
         const texts = new St.BoxLayout({
             vertical: true,
@@ -2060,7 +2094,7 @@ export default class ErhaiOSK extends Extension {
             reactive: false,
             x_expand: true,
         });
-        content.add_child(iconArea);
+        content.add_child(iconActor);
         content.add_child(texts);
         content.add_child(value);
         content.add_child(chevron);
@@ -4333,6 +4367,10 @@ export default class ErhaiOSK extends Extension {
         // grip bar is not a keyboard).  The seed above still applies, and the
         // reset memory means the fit runs correctly once the rows come back.
         this._reflow(oldHeight);
+        // The card was fitted against the old work area; refit it here or it
+        // keeps the previous screen's ceiling and scrolls for no reason.
+        if (this._settingsOpen)
+            this._scheduleSettingsLayout(true);
     }
 
     // ---- dragging ----------------------------------------------------

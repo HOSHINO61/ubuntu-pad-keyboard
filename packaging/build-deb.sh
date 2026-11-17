@@ -29,6 +29,13 @@ cp "$ROOT/scripts/pad-osk-ext/extension.js" \
    "$ROOT/scripts/pad-osk-ext/metadata.json" \
    "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/"
 
+# Brand marks the extension shows as pictures (the Coolapk tile in the about
+# card).  Missing is not fatal: the row falls back to the drawn info icon.
+if [ -d "$ROOT/scripts/pad-osk-ext/icons" ]; then
+    cp -r "$ROOT/scripts/pad-osk-ext/icons" \
+       "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/"
+fi
+
 cp "$ROOT/scripts/pad-osk-toggle.sh" \
    "$STAGE/usr/bin/pad-osk"
 
@@ -65,6 +72,11 @@ chmod 644 "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/"*.js \
           "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/"*.json
 find "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/locale" \
      -name '*.mo' -exec chmod 644 {} + 2>/dev/null || true
+# Icons come in with cp -r, which keeps whatever modes the source tree has; a
+# directory that is not world-readable would make the shell icon lookup fail.
+if [ -d "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/icons" ]; then
+    chmod -R a+rX "$STAGE/usr/share/gnome-shell/extensions/pad-osk@local/icons"
+fi
 
 echo "=== tree ==="
 find "$STAGE" -path "$STAGE/DEBIAN" -prune -o -print | sed "s|$STAGE|.|" | sort
