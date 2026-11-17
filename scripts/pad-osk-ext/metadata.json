@@ -1,9 +1,9 @@
 {
   "uuid": "pad-osk@local",
   "name": "PAD-OSK",
-  "description": "On-screen keyboard that injects keys via Clutter.VirtualInputDevice, so it works with Electron/Chromium apps (QQ, Chrome) that never speak text-input-v3. Lives inside the shell, so it never steals keyboard focus. A settings sheet behind the ⚙ button picks three key sizes, four palettes (graphite/light/warm/contrast) plus a user-defined palette, a background transparency from 100% down to 50%, a backdrop image, and a one-tap reset to defaults.",
+  "description": "On-screen keyboard that injects keys via Clutter.VirtualInputDevice, so it works with Electron/Chromium apps (QQ, Chrome) that never speak text-input-v3. Lives inside the shell, so it never steals keyboard focus. The gear button opens a detached settings card: five key sizes, four preset palettes plus a custom colour picker (panel/key/modifier/pressed/accent, each with presets, a spectrum and a hex field), panel transparency, corner radius, a backdrop image, links to the project site and releases, and a one-tap reset to defaults.",
   "shell-version": [
     "50"
   ],
-  "version": 10
+  "version": 11
 }

@@ -1,5 +1,5 @@
 Package: pad-osk
-Version: 1.0.2
+Version: 1.1.0
 Architecture: all
 Maintainer: erhai <user@opd2413.local>
 Section: utils
@@ -21,14 +21,17 @@ Description: On-screen keyboard with palettes, sizes and transparency
  .
  Layout is PC-style with a number row, sticky modifiers, arrow keys and a
  Chinese/English input-method toggle. Every character key, the erase key and
- the arrows repeat while held. A settings sheet behind the grip bar's gear
- button picks the key size (small / medium / large, 55% / 66% / 76% of the
- screen width), the palette (graphite / light / warm / high contrast, plus a
- user-defined palette read from the [custom] group), how see-through the whole
- keyboard is (100% down to 50% -- panel, keys and glyphs fade together) and an
- optional background image from ~/.config/pad-osk/backgrounds/. A reset
- button returns everything to the defaults. Settings are remembered per user
- and can be fine-tuned from ~/.config/pad-osk/position.kf. The panel can be
- dragged, collapsed to a thin bar, closed, and hidden from Quick Settings or
- the application grid. It steps aside when the shutdown/session dialog
- appears.
+ the arrows repeat while held. The gear on the grip bar opens a settings card
+ of its own: it drops below (or above) the keyboard, titles itself, and lists
+ one row per setting in the MIUIX style -- icon, title and subtitle, the
+ current value and a chevron that expands the row. The rows pick one of five
+ key sizes (55%, 62%, 66%, 71%, 76% of the screen width), the palette
+ (graphite / light / warm / high contrast, plus a custom palette with presets,
+ a spectrum and a hex field for panel, key, modifier, pressed and accent),
+ how see-through the panel is (100% down to 50%), the corner radius, and an
+ optional backdrop image from ~/.config/pad-osk/backgrounds/. The About group
+ carries a reset button, a link to the project site and a link to the GitHub
+ releases. Settings are remembered per user and can be fine-tuned from
+ ~/.config/pad-osk/position.kf. The panel can be dragged, collapsed to a thin
+ bar, closed, and hidden from Quick Settings or the application grid. It steps
+ aside when the shutdown/session dialog appears.
