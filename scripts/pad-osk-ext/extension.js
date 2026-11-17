@@ -2816,6 +2816,10 @@ export default class ErhaiOSK extends Extension {
         if (!this._box)
             return;
         const mon = Main.layoutManager.primaryMonitor;
+        // Hotplug leaves no primary for an instant; a throw from inside the
+        // monitors-changed handler would leave the panel wherever it was.
+        if (!mon)
+            return;
         const [w, h] = this._box.get_size();
         const nx = Math.max(mon.x, Math.min(Math.round(x), mon.x + mon.width - w));
         const ny = Math.max(mon.y, Math.min(Math.round(y), mon.y + mon.height - h));
