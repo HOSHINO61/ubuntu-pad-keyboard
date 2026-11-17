@@ -766,6 +766,7 @@ export default class ErhaiOSK extends Extension {
             this._hidden = false;
             this._hiddenByModal = false;
             this._placed = false;
+            this._monitorFitId = 0;
             this._dragging = false;
             this._grabId = 0;
             this._posX = 0;
@@ -858,6 +859,10 @@ export default class ErhaiOSK extends Extension {
         if (this._modalPollId) {
             GLib.source_remove(this._modalPollId);
             this._modalPollId = 0;
+        }
+        if (this._monitorFitId) {
+            GLib.source_remove(this._monitorFitId);
+            this._monitorFitId = 0;
         }
         if (this._monitorId) {
             Main.layoutManager.disconnect(this._monitorId);
@@ -2819,9 +2824,60 @@ export default class ErhaiOSK extends Extension {
         this._box.set_translation(nx, ny, 0);
     }
 
+    // A rotation, a different primary display or a resolution change moves the
+    // width every size step is a fraction *of*, which makes both the cached
+    // scale and the fraction-fit memory stale.  Re-clamping the position (all
+    // that used to happen here) kept the panel on screen but left the five
+    // steps sized for the old screen until the session restarted.
     _onMonitorsChanged() {
-        if (this._box)
-            this._applyPosition(this._posX, this._posY);
+        if (!this._box)
+            return;
+        // Clamp into the new geometry right away, so the panel is never left
+        // half off-screen while the re-fit waits for the new layout to settle.
+        this._applyPosition(this._posX, this._posY);
+        // One resolution change emits this signal once per step and a rotation
+        // can emit it twice; collapse the burst into a single re-fit.
+        if (this._monitorFitId) {
+            GLib.source_remove(this._monitorFitId);
+            this._monitorFitId = 0;
+        }
+        this._monitorFitId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 200,
+            () => {
+                this._monitorFitId = 0;
+                this._refitForMonitor();
+                return GLib.SOURCE_REMOVE;
+            });
+    }
+
+    // New screen width -> a fresh seed scale for the current step; the
+    // measure-and-correct pass in _reflow()/_fitWidth() then lands on the
+    // fraction that is actually allocated.  Its memory (_fitBest/_fitDone)
+    // describes the old screen width, so it has to start over -- otherwise the
+    // first measurement on the new screen is compared against a "best" error
+    // from a width that no longer exists.
+    _refitForMonitor() {
+        if (!this._box)
+            return;
+        const mon = Main.layoutManager.primaryMonitor;
+        if (!mon || !mon.width)
+            return;
+        this._fitBest = null;
+        this._fitDone = false;
+        const step = findStep(this._steps, this._sizeName);
+        if (step) {
+            const seed = clampScale(scaleForStep(step));
+            if (seed !== this._scale) {
+                this._scale = seed;
+                this._applyScale();
+            }
+        }
+        log(`pad-osk: monitors changed ${mon.width}x${mon.height} at `
+            + `${mon.x},${mon.y} -> step ${this._sizeName} seed ${this._scale}`);
+        const [, oldHeight] = this._box.get_size();
+        // Collapsed or hidden, _reflow() skips the fit on purpose (a 17%-wide
+        // grip bar is not a keyboard).  The seed above still applies, and the
+        // reset memory means the fit runs correctly once the rows come back.
+        this._reflow(oldHeight);
     }
 
     // ---- dragging ----------------------------------------------------
