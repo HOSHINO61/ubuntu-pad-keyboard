@@ -445,12 +445,19 @@ const paintValueBar = (area, hsv) => {
 };
 
 // A 调色板 chip: the colour itself, outlined with the theme accent while the
-// current role already holds it.
+// current role already holds it.  A near-black chip needs a light edge or it is
+// an empty-looking hole on the dark sheet, so the outline follows the chip's own
+// luminance instead of always darkening it.
 const paletteChipStyle = (color, active, scale) => {
     const size = Math.max(16, Math.round(CHIP_PX * scale));
+    const rgb = hexToRgb(color);
+    const edge = !rgb
+        ? 'rgba(128,128,128,0.45)'
+        : luminance(rgb) < 0.22
+            ? 'rgba(255,255,255,0.38)'
+            : shade(color, -0.35);
     return `background-color: ${color};`
-        + ` border: ${px(2, scale)} solid `
-        + `${active ? THEME.accent : shade(color, -0.35)};`
+        + ` border: ${px(2, scale)} solid ${active ? THEME.accent : edge};`
         + ` border-radius: ${pxSoft(6, scale)};`
         + ` width: ${size}px; height: ${size}px;`
         + ` padding: 0; margin: ${px(CHIP_GAP_PX / 2, scale)};`;
@@ -1266,6 +1273,7 @@ export default class ErhaiOSK extends Extension {
         this._customBox = new St.BoxLayout({
             vertical: true,
             reactive: false,
+            spacing: 4,
             x_expand: false,
             x_align: Clutter.ActorAlign.START,
             visible: this._themeName === CUSTOM_THEME,
@@ -1420,7 +1428,7 @@ export default class ErhaiOSK extends Extension {
                 text: T('Done'),
                 y_align: Clutter.ActorAlign.CENTER,
             }),
-            style: sizeBtnStyle(false, this._scale),
+            style: sizeBtnStyle(true, this._scale),
             reactive: true,
             can_focus: false,
             track_hover: true,
@@ -2535,7 +2543,7 @@ export default class ErhaiOSK extends Extension {
         if (this._moreBtn)
             this._moreBtn.style = sizeBtnStyle(false, scale);
         if (this._doneBtn)
-            this._doneBtn.style = sizeBtnStyle(false, scale);
+            this._doneBtn.style = sizeBtnStyle(true, scale);
         if (this._revertBtn)
             this._revertBtn.style = sizeBtnStyle(false, scale);
         const moreLabel = this._moreBtn?.get_child();
