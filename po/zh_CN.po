@@ -80,7 +80,10 @@ msgid "Done"
 msgstr "完成"
 
 msgid "Reset to defaults"
-msgstr "恢复默认"
+msgstr "恢复默认设置"
+
+msgid "Version"
+msgstr "版本号"
 
 msgid "(or drop images into ~/.config/pad-osk/backgrounds/)"
 msgstr "（也可把图片放进 ~/.config/pad-osk/backgrounds/）"

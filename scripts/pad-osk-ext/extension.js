@@ -968,6 +968,15 @@ const settingsCloseBtnStyle = scale =>
     + ` margin: ${px(2, scale)} ${px(4, scale)} 0 0;`
     + ` font-size: ${px(18, scale)};`;
 
+// The sub-page's way back, sitting where MIUIX puts it: a bare chevron to the
+// left of the page title, in the page's own ink so it reads as navigation and
+// not as another button.
+const settingsBackBtnStyle = scale =>
+    `color: ${pageFgSoft(0.85)}; background-color: transparent;`
+    + ` border-radius: ${pxSoft(10, scale)};`
+    + ` padding: ${px(2, scale)} ${px(12, scale)} ${px(2, scale)} 0;`
+    + ` font-size: ${px(38, scale)};`;
+
 const settingsDetailsStyle = scale =>
     `padding: ${px(4, scale)} ${px(12, scale)} ${px(12, scale)} ${px(12, scale)};`;
 
@@ -1580,6 +1589,13 @@ export default class ErhaiOSK extends Extension {
         this._rowSeparators = [];
         this._iconAreas = [];
 
+        // The card carries two pages: the settings list, and a 关于 sub-page
+        // reached from its last row.  The three link rows and the reset button
+        // live on the sub-page so the list stays short enough to fit above a
+        // keyboard on a 1080p screen without scrolling.
+        this._pages = new St.BoxLayout({vertical: true, reactive: false});
+        this._pages.add_child(this._settings);
+
         this._pageTitle = new St.Label({
             text: T('Settings'),
             x_align: Clutter.ActorAlign.START,
@@ -1870,31 +1886,92 @@ export default class ErhaiOSK extends Extension {
         this._bgRow = new St.BoxLayout({reactive: false});
         backgroundDetails.add_child(this._bgRow);
 
-        // ---- 关于 ---------------------------------------------------
+        // ---- 关于: one row here, everything else on its own page -----
         const aboutGroup = this._newGroup();
-        // The address the README hands out: a page that does not move when a
-        // repository or a package host does.  Release notes stay on GitHub,
-        // which is where the update announcements are written.
-        this._linkRow(aboutGroup, T('Project site'),
-            T('Project site hint'), 'website', 'https://mybailu.cn/osk/');
-        this._linkRow(aboutGroup, T('Release notes'),
-            T('Release notes hint'), 'update',
-            'https://github.com/HOSHINO61/ubuntu-pad-keyboard/releases');
-        const aboutDetails = this._newSection(aboutGroup, 'about',
-            T('About'), T('About hint'), 'info');
-        const versionRow = new St.BoxLayout({reactive: false});
+        const aboutRow = this._rowBase(T('About'), T('About hint'), 'info');
+        aboutRow.value.text = '1.1';
+        aboutRow.btn.connect('clicked', () => this._showAbout(true));
+        aboutGroup.add_child(aboutRow.btn);
+
+        // ---- the 关于 page -------------------------------------------
+        // 项目网站 / 版本发布 / 作者酷安 + version and reset: it is the copyright
+        // block, and it opens from one row instead of pushing the settings list
+        // past the bottom of a 1080p screen.
+        this._aboutPage = new St.BoxLayout({
+            vertical: true,
+            reactive: false,
+            visible: false,
+            x_expand: true,
+        });
+        this._pages.add_child(this._aboutPage);
+
+        const aboutHead = new St.BoxLayout({reactive: false, x_expand: true});
+        this._aboutBackBtn = new St.Button({
+            child: new St.Label({
+                text: '‹',
+                y_align: Clutter.ActorAlign.CENTER,
+            }),
+            style: settingsBackBtnStyle(this._scale),
+            reactive: true,
+            can_focus: false,
+            track_hover: true,
+        });
+        this._aboutBackBtn.connect('clicked', () => this._showAbout(false));
+        aboutHead.add_child(this._aboutBackBtn);
+        this._aboutTitle = new St.Label({
+            text: T('About'),
+            y_align: Clutter.ActorAlign.CENTER,
+            style: settingsPageTitleStyle(this._scale),
+        });
+        aboutHead.add_child(this._aboutTitle);
+        this._aboutPage.add_child(aboutHead);
+
+        // 版本号 reads as a row like everything else on the page: the label on
+        // the left, the number on the right, no chevron because there is
+        // nothing to open.
+        const infoGroup = this._newGroup(this._aboutPage);
+        const versionRow = new St.BoxLayout({
+            reactive: false,
+            x_expand: true,
+            style: settingsRowStyle(this._scale),
+        });
         this._versionLabel = new St.Label({
-            text: 'pad-osk 1.1',
+            text: T('Version'),
             x_align: Clutter.ActorAlign.START,
-            style: settingsRowHintStyle(this._scale),
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            style: settingsRowTitleStyle(this._scale),
         });
         versionRow.add_child(this._versionLabel);
-        aboutDetails.add_child(versionRow);
-        this._buildResetRow(aboutDetails);
+        this._versionValue = new St.Label({
+            text: '1.1',
+            y_align: Clutter.ActorAlign.CENTER,
+            style: settingsRowValueStyle(this._scale),
+        });
+        versionRow.add_child(this._versionValue);
+        infoGroup.add_child(versionRow);
+        this._newSeparator(infoGroup);
 
-        // Credit line last, so it sits under 关于: the Coolapk profile is where
-        // the tablet crowd actually finds the project and its updates.
-        this._linkRow(aboutGroup, T('Author'), T('Author hint'), COOLAPK_LOGO,
+        const resetBox = new St.BoxLayout({
+            vertical: true,
+            reactive: false,
+            x_expand: true,
+            style: settingsDetailsStyle(this._scale),
+        });
+        infoGroup.add_child(resetBox);
+        this._buildResetRow(resetBox);
+
+        // The address the README hands out: a page that does not move when a
+        // repository or a package host does.  Release notes stay on GitHub,
+        // which is where the update announcements are written.  The Coolapk
+        // profile comes last: it is the credit line of this block.
+        const linkGroup = this._newGroup(this._aboutPage);
+        this._linkRow(linkGroup, T('Project site'),
+            T('Project site hint'), 'website', 'https://mybailu.cn/osk/');
+        this._linkRow(linkGroup, T('Release notes'),
+            T('Release notes hint'), 'update',
+            'https://github.com/HOSHINO61/ubuntu-pad-keyboard/releases');
+        this._linkRow(linkGroup, T('Author'), T('Author hint'), COOLAPK_LOGO,
             'https://www.coolapk.com/u/41024424');
 
         // The separator after the last row of each card would be a stray line
@@ -1945,19 +2022,21 @@ export default class ErhaiOSK extends Extension {
             hscrollbar_policy: St.PolicyType.NEVER,
             vscrollbar_policy: St.PolicyType.AUTOMATIC,
         });
-        this._settingsScroll.set_child(this._settings);
+        this._settingsScroll.set_child(this._pages);
         this._settingsCard.add_child(this._settingsScroll);
     }
 
-    // One card of rows, in the MIUIX shape: a rounded block of its own.
-    _newGroup() {
+    // One card of rows, in the MIUIX shape: a rounded block of its own.  The
+    // parent defaults to the main list; the 关于 sub-page passes its own box so
+    // both pages share the same shape, separator trimming and restyling.
+    _newGroup(parent = this._settings) {
         const group = new St.BoxLayout({
             vertical: true,
             reactive: false,
             x_expand: true,
             style: settingsGroupStyle(this._scale),
         });
-        this._settings.add_child(group);
+        parent.add_child(group);
         this._groups.push(group);
         return group;
     }
@@ -2111,6 +2190,22 @@ export default class ErhaiOSK extends Extension {
         return {btn, value, chevron};
     }
 
+    // Switch the card between the settings list and the 关于 sub-page.  The two
+    // pages do not share a top, so the scroll position goes back to zero, and
+    // the card refits because the sub-page is much shorter than the list.
+    _showAbout(open) {
+        if (!this._pages || !this._aboutPage || !this._settings)
+            return;
+        const shown = !!open;
+        this._aboutPage.visible = shown;
+        this._settings.visible = !shown;
+        const adj = this._settingsScroll?.get_vadjustment();
+        if (adj)
+            adj.set_value(0);
+        if (this._settingsOpen)
+            this._scheduleSettingsLayout(true);
+    }
+
     _toggleSection(key) {
         const target = this._sections?.[key];
         if (!target)
@@ -2138,7 +2233,8 @@ export default class ErhaiOSK extends Extension {
             s => Math.abs(s.value - this._radius) < 0.001);
         this._setSectionValue('radius', radius ? T(radius.label) : '');
         this._setSectionValue('background', this._backgroundValueText());
-        this._setSectionValue('about', '');
+        // 关于 has no section of its own any more: it is a row that opens its
+        // sub-page, and the value there is the version number.
     }
 
     _setSectionValue(key, text) {
@@ -2161,7 +2257,9 @@ export default class ErhaiOSK extends Extension {
         if (this._pageTitle)
             this._pageTitle.style = settingsPageTitleStyle(scale);
         if (this._versionLabel)
-            this._versionLabel.style = settingsRowHintStyle(scale);
+            this._versionLabel.style = settingsRowTitleStyle(scale);
+        if (this._versionValue)
+            this._versionValue.style = settingsRowValueStyle(scale);
         for (const group of this._groups ?? [])
             group.style = settingsGroupStyle(scale);
         for (const row of this._rows ?? [])
@@ -2176,6 +2274,10 @@ export default class ErhaiOSK extends Extension {
             label.style = settingsRowChevronStyle(scale);
         if (this._settingsCloseBtn)
             this._settingsCloseBtn.style = settingsCloseBtnStyle(scale);
+        if (this._aboutBackBtn)
+            this._aboutBackBtn.style = settingsBackBtnStyle(scale);
+        if (this._aboutTitle)
+            this._aboutTitle.style = settingsPageTitleStyle(scale);
         for (const separator of this._rowSeparators ?? [])
             separator.style = settingsSeparatorStyle(scale);
         for (const section of Object.values(this._sections ?? {}))
@@ -2978,6 +3080,10 @@ export default class ErhaiOSK extends Extension {
         this._settingsOpen = false;
         if (this._settingsCard)
             this._settingsCard.visible = false;
+        // The next open starts on the list again, not on the page that was left
+        // behind last time.
+        if (this._aboutPage && !this._settings.visible)
+            this._showAbout(false);
         if (this._settingsLayoutId) {
             GLib.source_remove(this._settingsLayoutId);
             this._settingsLayoutId = 0;
@@ -4215,7 +4321,11 @@ export default class ErhaiOSK extends Extension {
         const header = this._settingsCard.get_child_at_index(0);
         const headerH = header ? header.get_preferred_height(width)[1] : 0;
         const innerW = Math.max(120, width - 2 * pad);
-        const natural = this._settings.get_preferred_height(innerW)[1] ?? 0;
+        // Measure the page that is actually showing: the 关于 sub-page is much
+        // shorter than the list, and fitting against the hidden one left the
+        // card with a big empty bottom.
+        const page = this._aboutPage?.visible ? this._aboutPage : this._settings;
+        const natural = page.get_preferred_height(innerW)[1] ?? 0;
         if (natural <= 0)
             return;
         // Fit to the side the card is about to stand on, from the same
