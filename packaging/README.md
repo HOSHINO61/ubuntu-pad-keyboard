@@ -199,6 +199,25 @@ sha256    471836c743e976d5c8519b1d6a95e7e974d1205f05512d3fa48ab0851cf66695
 
 ---
 
+## 验证记录（2026-11-18，1.1.1，构建机 + 实机）
+
+1.1.1 收尾了设置卡片的手势滚动（真机确认可滑）、卡片与键盘解耦拖动、键盘整块无极拖动、
+深色皮肤修正、三张程序化预置背景，以及「关于 → 许可协议」的独立可滚动弹窗。
+
+```
+构建      pad-osk_1.1.1_all.deb（129,006 字节）
+          在 Ubuntu 24.04 x86_64 虚拟机上用 dpkg-deb 构建（纯打包，无编译）
+sha256    cee4d202f8049ac499ddee2077853dde7b480c805ff2e312e33c17708e4f65fd
+字段      Package: pad-osk  Version: 1.1.1  Architecture: all
+包内      control 2,575 / extension.js 325,543 / metadata.json 659
+          locale/zh_CN/LC_MESSAGES/pad-osk@local.mo 2,871
+          icons/coolapk.png 6,985（「作者酷安」行图标）
+实机      VMware（amd64 / GNOME 50.1）：设置卡片滚动、卡片与键盘独立拖动、无极拖动、
+          三张预置背景、许可弹窗开合与滚动均正常，journalctl 无 JS 异常
+```
+
+---
+
 ## 改版本号
 
 改 `packaging/pad-osk/DEBIAN/control` 里的 `Version:`（和需要时的
