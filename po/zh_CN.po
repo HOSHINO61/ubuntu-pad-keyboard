@@ -2,7 +2,7 @@
 # English strings in extension.js are the msgids.
 msgid ""
 msgstr ""
-"Project-Id-Version: pad-osk 1.0.1\n"
+"Project-Id-Version: pad-osk 1.1.1\n"
 "Report-Msgid-Bugs-To: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -148,6 +148,15 @@ msgstr "按键和面板的圆角"
 msgid "Background hint"
 msgstr "给键盘铺一张背景图"
 
+msgid "Dusk"
+msgstr "暮色"
+
+msgid "Neon"
+msgstr "霓虹"
+
+msgid "Slate"
+msgstr "石板"
+
 msgid "About hint"
 msgstr "版本信息与恢复默认"
 msgid "Theme"
@@ -159,7 +168,13 @@ msgid "Project site"
 msgstr "项目网站"
 
 msgid "Project site hint"
-msgstr "打开 mybailu.cn/osk/"
+msgstr "访问本项目发布页"
+
+msgid "License"
+msgstr "许可协议"
+
+msgid "License hint"
+msgstr "查看本项目许可"
 
 msgid "Release notes"
 msgstr "版本发布"

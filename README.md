@@ -307,6 +307,9 @@ background=/home/user/图片/星空.webp
 
 ![「关于」二级页：版本号 1.1 / 恢复默认设置 / 项目网站 · 版本发布 · 作者酷安](https://mybailu.cn/osk/assets/img/v1.1-about.webp)
 
+> 图里的版本号还写着 1.1（那是 1.1 的实拍）；1.1.1 起关于页显示 `1.1.1`，
+> 站点图片会在下次换图时一起更新。
+
 「中」档（默认）——Quick Settings 里能看到「屏幕键盘」开关，WiFi 名称已打码：
 
 ![Quick Settings 里的屏幕键盘开关（中档）](https://mybailu.cn/osk/assets/img/quick-settings.webp)
@@ -373,7 +376,7 @@ emoji_mode=keysym    ; 默认 paste
 ## 安装
 
 ```bash
-sudo apt install ./dist/pad-osk_1.0.1_all.deb
+sudo apt install ./dist/pad-osk_1.1.1_all.deb
 ```
 
 装完建议**重启**（不建议只注销：部分设备的 gdm 登录界面偶发黑屏 + 触屏失效）。
@@ -403,7 +406,7 @@ sudo apt remove pad-osk
 
 ```bash
 sh packaging/build-deb.sh
-# → dist/pad-osk_1.0.1_all.deb
+# → dist/pad-osk_1.1.1_all.deb
 ```
 
 版本号与架构都取自 `packaging/pad-osk/DEBIAN/control`，
