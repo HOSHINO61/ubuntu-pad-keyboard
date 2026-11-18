@@ -298,11 +298,14 @@ background=/home/user/图片/星空.webp
 
 ## 截图
 
-1.0.2 的设置面板——主题卡片一行五张（每张带自己的配色缩影），选 `自定义(Beta)` 后
-下面展开五行色块（1.1 已把这块换成取色器，见上面「自定义配色」）；这张用的是
-自定义配色（蓝 + 米白）：
+1.1 把设置搬出了键盘：点拖动条上的 `⚙`，弹出的是这样一张独立卡片——分组、分隔线、
+彩色图标、右侧是当前值 + `›`（这张用的是自定义配色，蓝 + 米白）：
 
-![PAD-OSK 1.0.2 设置面板](https://mybailu.cn/osk/assets/img/v1.0.2-settings.webp)
+![PAD-OSK 1.1 设置卡片](https://mybailu.cn/osk/assets/img/v1.1-settings.webp)
+
+版本号、恢复默认设置和三条外链收在「关于」这个二级页里：
+
+![「关于」二级页：版本号 1.1 / 恢复默认设置 / 项目网站 · 版本发布 · 作者酷安](https://mybailu.cn/osk/assets/img/v1.1-about.webp)
 
 「中」档（默认）——Quick Settings 里能看到「屏幕键盘」开关，WiFi 名称已打码：
 
